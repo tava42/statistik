@@ -74,17 +74,59 @@
 		
 		</nav>
 
-SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
-	COUNT(message_text) As Antal,
-	message_text As Larm
-    FROM alarm_tid WHERE message_text LIKE '%Stn 1%'
-UNION
-SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
-	COUNT(message_text) AS Antal,
-	message_text AS Larm
-    FROM alarm_tid WHERE message_text LIKE '%Stn 2%';
-
 	<?php
+	$sql_overview = 
+		"SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) As Antal,
+			message_text As Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 1%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 2%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 3%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 4%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 5%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 6%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 7%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 8%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 9%'
+		UNION
+		SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 AS Tid,
+			COUNT(message_text) AS Antal,
+			message_text AS Larm
+		    FROM alarm_tid WHERE message_text LIKE '%Stn 10%'  
+		ORDER BY `Tid`  DESC"
+		
 	$sql_temp = "SELECT
 			(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
 			COUNT(message_text) AS Antal,
