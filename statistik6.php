@@ -56,7 +56,6 @@
 
 	<body>
 		<nav>
-
 			<div align="center">
 				<form method="post">
 
@@ -85,23 +84,12 @@
 				<input type="submit" name="search_larm" class="button" value="Sök">
 				<input type="submit" name="search_all" class="button" value="Sök allt">
 
-				<a href="fetch.php">Fetch</a>
 			</div>
 
 			</form>
 		</nav>
 
 		<script type="text/javascript">
-
-
-			// function sortAsc(sort) {
-			// 	console.log(sort);
-			// }
-			//
-			// function sortDesc(x) {
-			// 	var sort = x;
-			// 	sortAsc(sort);
-			// }
 
 			function sortTable() {
 				var table, rows, switching, i, x, y, shouldSwitch;
@@ -117,11 +105,12 @@
 						x = rows[i].getElementsByTagName("TD")[4];
 						y = rows[i + 1].getElementsByTagName("TD")[4];
 
-							if (Number(x.innerHTML) > Number(y.innerHTML)) {
-								shouldSwitch = true;
-								break;
-							}
+						if (Number(x.innerHTML) > Number(y.innerHTML)) {
+							shouldSwitch = true;
+							break;
+						}
 					}
+
 					if (shouldSwitch) {
 						rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
 						switching = true;
@@ -172,31 +161,31 @@
 				$exclude_varning = check_exclude();
 
 				$sql = "SELECT
-								(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
-								COUNT(message_text) AS Antal,
-								message_text AS Larm
-								FROM alarm_tid
-								WHERE DATE(message_start) $interval $exclude_varning
-								AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
-								GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
-								ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC;";
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
+					COUNT(message_text) AS Antal,
+					message_text AS Larm
+					FROM alarm_tid
+					WHERE DATE(message_start) $interval $exclude_varning
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC;";
 
-					$result = get_data($sql);
+				$result = get_data($sql);
 
-					if ($result->num_rows > 0) {
-						$headers = ["Minuter", "Antal", "Larm"];
-						create_table($headers);
+				if ($result->num_rows > 0) {
+					$headers = ["Minuter", "Antal", "Larm"];
+					create_table($headers);
 
-						while($row = $result->fetch_assoc()) {
-							echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
-						}
+					while($row = $result->fetch_assoc()) {
+						echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+					}
 
 					echo "</tr>";
 					echo "</table><br><br>";
 
 					} else {
-						echo "<p align='center'>Inga resultat</p>";
-				}
+					echo "<p align='center'>Inga resultat</p>";
+					}
 			}
 
 			function utveckling($search_date) {
@@ -241,60 +230,59 @@
 					group by message_text
 					ORDER BY `Larm`  ASC;";
 
-					$result = get_data($sql);
+				$result = get_data($sql);
 
-					if ($result->num_rows > 0) {
+				if ($result->num_rows > 0) {
+					// echo "<p><button onclick='sortTable(1);'>Desc</button></p>";
+					// echo "<p><button onclick='sortDesc(5);'>Desc</button></p>";
+					// echo "<p><button onclick='sortAsc();'>Asc</button></p>";
+					$headers = ["NewTid", "NewAntal", "OldTid", "OldAntal", "Diff Tid", "Diff Antal", "Larm"];
+					create_table($headers);
 
-						// echo "<p><button onclick='sortTable(1);'>Desc</button></p>";
-						// echo "<p><button onclick='sortDesc(5);'>Desc</button></p>";
-						// echo "<p><button onclick='sortAsc();'>Asc</button></p>";
-						$headers = ["NewTid", "NewAntal", "OldTid", "OldAntal", "Diff Tid", "Diff Antal", "Larm"];
-						create_table($headers);
-
-							$rows = [];
-							while($row = mysqli_fetch_assoc($result)) {
-									$rows[] = $row;
-								}
-
-							$temp = 0;
-
-							foreach($rows as $value) {
-								if ($temp != 0) {
-									if ($value['Larm'] == $Larm) {
-										if ($value['Datum'] > $OldDatum) {
-											echo "<tr><td>" .$value['NewTid']. "</td>";
-											echo "<td>" .$value['NewAntal']. "</td>";
-
-											echo "<td>" .$OldTid. "</td>";
-											echo "<td>" .$OldAntal. "</td>";
-
-											echo "<td>" .$value['NewTid'] - $OldTid. "</td>";
-											echo "<td id='color'>" .$value['NewAntal'] - $OldAntal. "</td>";
-										} else {
-											echo "<tr><td>" .$OldTid. "</td>";
-											echo "<td>" .$OldAntal. "</td>";
-
-											echo "<td>" .$value['NewTid']. "</td>";
-											echo "<td>" .$value['NewAntal']. "</td>";
-
-											echo "<td>" .$OldTid - $value['NewTid']. "</td>";
-											echo "<td id='color'>" .$OldAntal - $value['NewAntal']. "</td>";
-										}
-										echo "<td>" .$value['Larm']. "</td></tr>";
-									}
-								}
-								$OldDatum = $value['Datum'];
-								$OldAntal = $value['NewAntal'];
-								$OldTid = $value['NewTid'];
-								$Larm = $value['Larm'];
-								$temp = 1;
-							}
-						echo "</tr>";
-						echo "</table><br><br>";
-						echo '<script type="text/javascript">sortTable();</script>';
-					} else {
-						echo "<p align='center'>Inga resultat</p>";
+					$rows = [];
+					while($row = mysqli_fetch_assoc($result)) {
+						$rows[] = $row;
 					}
+
+					$temp = 0;
+
+					foreach($rows as $value) {
+						if ($temp != 0) {
+							if ($value['Larm'] == $Larm) {
+								if ($value['Datum'] > $OldDatum) {
+									echo "<tr><td>" .$value['NewTid']. "</td>";
+									echo "<td>" .$value['NewAntal']. "</td>";
+
+									echo "<td>" .$OldTid. "</td>";
+									echo "<td>" .$OldAntal. "</td>";
+
+									echo "<td>" .$value['NewTid'] - $OldTid. "</td>";
+									echo "<td id='color'>" .$value['NewAntal'] - $OldAntal. "</td>";
+								} else {
+									echo "<tr><td>" .$OldTid. "</td>";
+									echo "<td>" .$OldAntal. "</td>";
+
+									echo "<td>" .$value['NewTid']. "</td>";
+									echo "<td>" .$value['NewAntal']. "</td>";
+
+									echo "<td>" .$OldTid - $value['NewTid']. "</td>";
+									echo "<td id='color'>" .$OldAntal - $value['NewAntal']. "</td>";
+								}
+								echo "<td>" .$value['Larm']. "</td></tr>";
+							}
+						}
+						$OldDatum = $value['Datum'];
+						$OldAntal = $value['NewAntal'];
+						$OldTid = $value['NewTid'];
+						$Larm = $value['Larm'];
+						$temp = 1;
+					}
+					echo "</tr>";
+					echo "</table><br><br>";
+					echo '<script type="text/javascript">sortTable();</script>';
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
+				}
 			}
 
 			function average() {
@@ -322,11 +310,12 @@
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . $row["Avg"] . "</td><td>" . $row["Larm"] .  "</td></tr>";
 					}
-						echo "</tr>";
-						echo "</table><br><br>";
 
-					} else {
-						echo "<p align='center'>Inga resultat</p>";
+					echo "</tr>";
+					echo "</table><br><br>";
+
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
 				}
 			}
 
@@ -335,13 +324,13 @@
 				$exclude_varning = check_exclude();
 
 				$sql = "SELECT
-								(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
-								COUNT(message_text) AS Antal,
-								message_text AS Larm
-								FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
-								AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
-								GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
-								ORDER BY COUNT(message_text) DESC;";
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					COUNT(message_text) AS Antal,
+					message_text AS Larm
+					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					ORDER BY COUNT(message_text) DESC;";
 
 				$result = get_data($sql);
 
@@ -350,7 +339,7 @@
 					create_table($headers);
 
 					while($row = $result->fetch_assoc()) {
-							echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+						echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
 					}
 					echo "</tr>";
 					echo "</table><br><br>";
@@ -364,17 +353,17 @@
 				$exclude_varning = check_exclude();
 
 				$sql = "SELECT
-							YEAR(message_start) As Year,
-							WEEK(message_start, 1) As Vecka,
-							(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
-							COUNT(message_text) As Antal,
-							(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV COUNT(message_text) AS Avg,
-								(SELECT avg(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 As average,
-							message_text AS Larm
-								FROM alarm_tid
-								WHERE message_text = '".$search_larm."'
-								AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
-								GROUP BY YEARWEEK(DATE(message_start), 1) DESC";
+					YEAR(message_start) As Year,
+					WEEK(message_start, 1) As Vecka,
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
+					COUNT(message_text) As Antal,
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV COUNT(message_text) AS Avg,
+					(SELECT avg(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 As average,
+					message_text AS Larm
+					FROM alarm_tid
+					WHERE message_text = '".$search_larm."'
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					GROUP BY YEARWEEK(DATE(message_start), 1) DESC";
 
 				$result = get_data($sql);
 
@@ -399,51 +388,49 @@
 			function search_all($search_larm) {
 
 				$sql = "SELECT
-						((TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
-						message_text AS Larm,
-						message_start as Start
-						FROM alarm_tid
-						WHERE message_text LIKE '%".$search_larm."%'
-						ORDER BY message_start DESC;";
+					((TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					message_text AS Larm,
+					message_start as Start
+					FROM alarm_tid
+					WHERE message_text LIKE '%".$search_larm."%'
+					ORDER BY message_start DESC;";
 
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
-						$headers = ['Tid', 'Datum', 'Larm'];
-						create_table($headers);
+					$headers = ['Tid', 'Datum', 'Larm'];
+					create_table($headers);
 
-						$rows = [];
+					$rows = [];
 
-						while($row = mysqli_fetch_assoc($result)) {
-								$rows[] = $row;
-							}
+					while($row = mysqli_fetch_assoc($result)) {
+						$rows[] = $row;
+					}
 
-						$change = 0;
-						#$reverse=array_reverse($rows);
-						$temp = 0;
+					$change = 0;
+					#$reverse=array_reverse($rows);
+					$temp = 0;
 
-						foreach($rows as $value) {
-							if ($temp != 0) {
-								echo "<tr><td>" .$Tid. "</td>";
-								echo "<td>" .$Start. "</td>";
-								echo "<td>" .$Larm. "</td></tr>";
-							}
-
-							$Tid = $value['Tid'];
-							$Start = $value['Start'];
-							$Larm = $value['Larm'];
-
-							$temp = 1;
+					foreach($rows as $value) {
+						if ($temp != 0) {
+							echo "<tr><td>" .$Tid. "</td>";
+							echo "<td>" .$Start. "</td>";
+							echo "<td>" .$Larm. "</td></tr>";
 						}
 
-						echo "</tr>";
-						echo "</table><br><br>";
-
-					} else {
-						echo "<p align='center'>Inga resultat</p>";
+						$Tid = $value['Tid'];
+						$Start = $value['Start'];
+						$Larm = $value['Larm'];
+						$temp = 1;
 					}
-				}
 
+					echo "</tr>";
+					echo "</table><br><br>";
+
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
+				}
+			}
 
 			if (isset($_POST['today'])) {
 				echo "<p align='center'>Idag</p>";
@@ -451,43 +438,42 @@
 				recent($interval);
 
 			} else if (isset($_POST['last_week'])) {
-					echo "<p align='center'>Senaste 7 dagar</p>";
-					$interval = " >= current_date - INTERVAL 7 DAY";
-					recent($interval);
+				echo "<p align='center'>Senaste 7 dagar</p>";
+				$interval = " >= current_date - INTERVAL 7 DAY";
+				recent($interval);
 
 			} else if (isset($_POST['last_month'])) {
-					echo "<p align='center'>Senaste 30 dagar</p>";
-					$interval = " >= current_date - INTERVAL 30 DAY";
-					recent($interval);
+				echo "<p align='center'>Senaste 30 dagar</p>";
+				$interval = " >= current_date - INTERVAL 30 DAY";
+				recent($interval);
 
 			} else if (isset($_POST['avg_time'])) {
-					echo "<p align='center'>Genomsnittlig stopptid per larm</p>";
-					average();
+				echo "<p align='center'>Genomsnittlig stopptid per larm</p>";
+				average();
 
 			} else if (isset($_POST['search_date'])) {
-					$from = date('Y-m-d', strtotime($_POST['dateFrom']));
-					$to = date('Y-m-d', strtotime($_POST['dateTo']));
-					echo "<p align='center'>Från: $from  Till:  $to </p>";
-					search_date($from, $to);
+				$from = date('Y-m-d', strtotime($_POST['dateFrom']));
+				$to = date('Y-m-d', strtotime($_POST['dateTo']));
+				echo "<p align='center'>Från: $from  Till:  $to </p>";
+				search_date($from, $to);
 
 			} else if (isset($_POST['utveckling'])) {
-					$search_date = false;
-					utveckling($search_date);
+				$search_date = false;
+				utveckling($search_date);
 
 			} else if (isset($_POST['search_utveckling'])) {
-					$search_date = true;
-					utveckling($search_date);
+				$search_date = true;
+				utveckling($search_date);
 
 			} else if (isset($_POST['search_larm'])) {
-					$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
-					echo "<p align='center'>" . $search_larm . "</p>";
-					search_larm($search_larm);
+				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
+				echo "<p align='center'>" . $search_larm . "</p>";
+				search_larm($search_larm);
 
 			} else if (isset($_POST['search_all'])) {
-					$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
-					search_all($search_larm);
+				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
+				search_all($search_larm);
 			}
-
 
 		?>
 
