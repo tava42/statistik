@@ -82,7 +82,7 @@ if ($result->num_rows > 0) {
 
 
 function insert_data($sql) {
-     $conn = new mysqli('localhost', 'root', '', 'steelform');
+     $conn = new mysqli('localhost', 'root', '', '');
      $conn->query($sql);
 }
 
