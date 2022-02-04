@@ -2,8 +2,6 @@
 
 $datetime = date("Y-m-d H:i:s");
 $today = date('Y-m-d');
-// $datetime = date("2022-02-06 04:48:16");
-// $today = '2022-02-06';
 $hour = intval(date('H'));
 
 $sql = "SELECT datum, date_start, `$hour` As antal, kassV, kassH, old_kassV, old_kassH, old_value
@@ -17,7 +15,7 @@ if ($conn->connect_error) {
 }
 
 $result = $conn->query($sql);
-$conn->close();
+// $conn->close();
 
 while($row = $result->fetch_assoc()) {
      $date = $row['datum'];
@@ -85,14 +83,9 @@ if ($result->num_rows > 0) {
 
 function insert_data($sql) {
      $conn = new mysqli('localhost', 'root', '', 'steelform');
-
-     if ($conn->connect_error) {
-          die("Connection failed: " . $conn->connection_error);
-     }
-     echo $sql;
-
      $conn->query($sql);
-     $conn->close();
 }
+
+$conn->close();
 
  ?>
