@@ -8,7 +8,7 @@ $sql = "SELECT datum, date_start, `$hour` As antal, kassV, kassH, old_kassV, old
      FROM produktion
      WHERE datum = '".$today."'";
 
-$conn = new mysqli('localhost', 'root', '', 'steelform');
+$conn = new mysqli('localhost', 'root', '', '');
 
 if ($conn->connect_error) {
           die("Connection failed: " . $conn->connection_error);
