@@ -128,7 +128,7 @@
 			}
 
 			function get_data($sql) {
-				$conn = new mysqli('localhost', 'root', '', 'steelform');
+				$conn = new mysqli('localhost', 'root', '', '');
 
 				if ($conn->connect_error) {
 					die("Connection failed: " . $conn->connection_error);
