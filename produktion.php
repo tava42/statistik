@@ -8,14 +8,13 @@ $sql = "SELECT datum, date_start, `$hour` As antal, kassV, kassH, old_kassV, old
      FROM produktion
      WHERE datum = '".$today."'";
 
-$conn = new mysqli('localhost', 'root', '', '');
+$conn = new mysqli('localhost', 'root', '', 'steelform');
 
 if ($conn->connect_error) {
           die("Connection failed: " . $conn->connection_error);
 }
 
 $result = $conn->query($sql);
-// $conn->close();
 
 while($row = $result->fetch_assoc()) {
      $date = $row['datum'];
@@ -64,7 +63,7 @@ if ($result->num_rows > 0) {
                insert_data($sql);
           }
      } elseif ($old_kassV != $a2 or $old_kassH != $a1) {
-          if ($diff_kassV > 0 or $diff_kassH > 0) {
+          if ($diff_kassV > 0 && $diff_kassV < 3 or $diff_kassH > 0 && $diff_kassH < 3) {
                $sql = "UPDATE `produktion`
                     SET `old_kassV` = '".$a2."', `old_kassH` = '".$a1."', kassV = '".$new_kassV."', kassH = '".$new_kassH."'
                     WHERE `datum` = '".$today."'";
@@ -82,7 +81,8 @@ if ($result->num_rows > 0) {
 
 
 function insert_data($sql) {
-     $conn = new mysqli('localhost', 'root', '', '');
+     $conn = new mysqli('localhost', 'root', '', 'steelform');
+     echo $sql;
      $conn->query($sql);
 }
 
