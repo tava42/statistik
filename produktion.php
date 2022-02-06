@@ -75,7 +75,16 @@ if ($result->num_rows > 0) {
           insert_data($sql);
      }
 } else {
-     $sql = "INSERT INTO `produktion` (`datum`, `old_kassV`, `old_kassH`, `old_value`) VALUES ('".$today."', '".$a2."', '".$a1."', '".$a3."')";
+     $sql = "INSERT INTO `produktion` (`datum`";
+     for ($x = 0; $x < 24; $x++) {
+               $sql .= ", `$x`";
+     }
+     $sql .= ", `old_kassV`, `old_kassH`, `old_value`) VALUES ('".$today."'";
+     for ($x = 0; $x < 24; $x++) {
+          $sql .= ", '0'";
+     }
+     $sql .= ", '".$a2."', '".$a1."', '".$a3."')";
+     // $sql = "INSERT INTO `produktion` (`datum`, `old_kassV`, `old_kassH`, `old_value`) VALUES ('".$today."', '".$a2."', '".$a1."', '".$a3."')";
      insert_data($sql);
 }
 
