@@ -20,12 +20,35 @@
 				text-align: left;
 				margin-left: auto;
 				margin-right: auto;
-				width: 90%;
+				width: 80%;
+			}
+			.Datum { width: 12%; }
+			.År { width: 6%; }
+			.Vecka { width: 6%; }
+			.Minuter { width: 6%; }
+			.Sekunder { width: 6%; }
+			.Tid { width: 6%; }
+			.Antal { width: 6%; }
+			.Larm { width: 40%; }
+			.date_start { width: 12%; }
+			.date_end { width: 12%; }
+			.kassV { width: 4%; }
+			.kassH { width: 4%; }
+
+
+			td:hover {
+				overflow: visible;
 			}
 			th {
-				width: 5%;
+
 				background-color: #6496C8;
 				color: white;
+
+			}
+			td {
+				white-space: nowrap;
+ 				overflow: hidden;
+  				text-overflow: ellipsis;
 			}
 
 			tr:nth-child(even) {
@@ -44,6 +67,7 @@
 	</head>
 
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
 
 	<body>
 		<nav>
@@ -97,7 +121,7 @@
 						x = rows[i].getElementsByTagName("TD")[4];
 						y = rows[i + 1].getElementsByTagName("TD")[4];
 
-						if (Number(x.innerHTML) > Number(y.innerHTML)) {
+						if (Number(x.innerHTML) < Number(y.innerHTML)) {
 							shouldSwitch = true;
 							break;
 						}
@@ -110,25 +134,62 @@
 				}
 			}
 
+			function buildChart() {
+
+				var label = [];
+				var tid = [];
+				var antal = [];
+				for ( var i = 1; i < myTable.rows.length; i++ ) {
+				    label.push(myTable.rows[i].cells[1].innerHTML);
+				    tid.push(myTable.rows[i].cells[2].innerHTML);
+				    antal.push(myTable.rows[i].cells[3].innerHTML);
+				}
+
+				var ctx = document.getElementById("line-chart").getContext("2d");
+				ctx.canvas.width = 40;
+				ctx.canvas.height = 10;
+
+				var myChart = new Chart(ctx, {
+					type: 'line',
+					data: {
+					    labels: label.reverse(),
+					    datasets: [{
+							  label: "Tid",
+							  data: tid.reverse(),
+							  fill: false,
+							  backgroundColor: "red",
+							  borderColor: "red",
+							  borderCapStyle: 'butt'
+						  },
+						  {
+							  label: "Antal",
+							  data: antal.reverse(),
+							  fill: false,
+							  backgroundColor: "blue",
+							  borderColor: "blue",
+							  borderCapStyle: 'butt'
+					   }
+				   ]
+				   }
+				});
+			}
+
+
 		</script>
 
 		<?php
 
 			function create_table($headers) {
-				echo "<table id='myTable'>";
+				//echo "<table id='myTable'>";
 				echo "<tr>";
 
-				// for ($x = 0; $x < count($headers); $x++) {
-				// 	echo "<col span='1' style='width: 5%;'>";
-				// }
-
 				foreach ($headers as $key) {
-					echo "<th>".$key."</th>";
+					echo "<th class=".$key.">".$key."</th>";
 				}
 			}
 
 			function get_data($sql) {
-				$conn = new mysqli('localhost', 'root', '', '');
+				$conn = new mysqli('localhost', 'root', '', 'steelform');
 
 				if ($conn->connect_error) {
 					die("Connection failed: " . $conn->connection_error);
@@ -159,26 +220,35 @@
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE DATE(message_start) $interval $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
 					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC;";
 
 				$result = get_data($sql);
 
+
 				if ($result->num_rows > 0) {
 					$headers = array("Minuter", "Antal", "Larm");
+					echo "<table style='width:40%;' id='myTable'>";
 					create_table($headers);
+
+					$sum_antal = 0;
+					$data = array();
 
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+						$sum_antal = $sum_antal + $row['Antal'];
+						array_push($data, $row["Tid"]);
 					}
 
 					echo "</tr>";
 					echo "</table><br><br>";
+					echo $sum_antal;
 
 					} else {
 					echo "<p align='center'>Inga resultat</p>";
 					}
+
 			}
 
 			function utveckling($search_date) {
@@ -198,6 +268,7 @@
 					echo $first . '<br>';
 					echo $second;
 				} else {
+					echo "<p align='center'>Denna månaden jämfört med förra månaden</p>";
 					$first = 'CURRENT_DATE - INTERVAL 30 DAY AND current_date ';
 					$second = 'current_date - INTERVAL 61 DAY AND current_date - INTERVAL 31 DAY ';
 				}
@@ -209,7 +280,7 @@
 					message_start As Datum
 					FROM alarm_tid
 					WHERE DATE(message_start) BETWEEN $first
-					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					group by message_text
 					union
 					SELECT
@@ -219,7 +290,7 @@
 					message_start As Datum
 					FROM alarm_tid
 					WHERE DATE(message_start) BETWEEN $second
-					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					group by message_text
 					ORDER BY `Larm`  ASC;";
 
@@ -230,6 +301,7 @@
 					// echo "<p><button onclick='sortDesc(5);'>Desc</button></p>";
 					// echo "<p><button onclick='sortAsc();'>Asc</button></p>";
 					$headers = array("NewTid", "NewAntal", "OldTid", "OldAntal", "Diff Tid", "Diff Antal", "Larm");
+					echo "<table style='width:70%;' id='myTable'>";
 					create_table($headers);
 
 					$rows = array();
@@ -295,7 +367,7 @@
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV COUNT(message_text) AS Avg,
 					message_text AS Larm
 					FROM alarm_tid $exclude_varning
-					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
 					ORDER BY Avg DESC;";
 
@@ -303,6 +375,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("Sekunder", "Larm");
+					echo "<table style='width:40%;' id='myTable'>";
 					create_table($headers);
 
 					while($row = $result->fetch_assoc()) {
@@ -322,25 +395,29 @@
 				$exclude_varning = check_exclude();
 
 				$sql = "SELECT
-					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
-					ORDER BY COUNT(message_text) DESC;";
+					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC";
 
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
 					$headers = array("Minuter", "Antal", "Larm");
+					echo "<table style='width:40%;' id='myTable'>";
 					create_table($headers);
 
+					$sum = 0;
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+						$sum = $sum + $row["Tid"];
 					}
 					echo "</tr>";
 					echo "</table><br><br>";
+					echo "sum tid: " . $sum / 60 . " timmar";
 
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
@@ -355,29 +432,30 @@
 					WEEK(message_start, 1) As Vecka,
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 AS Tid,
 					COUNT(message_text) As Antal,
-					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV COUNT(message_text) AS Avg,
-					(SELECT avg(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV 60 As average,
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE message_text = '".$search_larm."'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 30
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					GROUP BY YEARWEEK(DATE(message_start), 1) DESC";
 
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
-					$headers = array("År", "Vecka", "Minuter", "Antal", "Genomsnitt(Sekunder)", "Larm");
+					$headers = array("År", "Vecka", "Minuter", "Antal", "Larm");
+					echo "<table style='width:50%;' id='myTable'>";
 					create_table($headers);
+					echo "<canvas id='line-chart' width='200' height='400'></canvas>";
 
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . $row["Year"] . "</td><td>" . $row["Vecka"] . "</td><td>" . $row["Tid"] . "</td><td>" .
-						 $row["Antal"] . "</td><td>" . $row["Avg"] . "</td><td class='hidden'>" . $row["Larm"] . "</td></tr>";
+						 $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
 						 $average[] = $row['Tid'];
 					}
 					echo "</tr>";
 					echo "</table><br><br>";
 					$average = array_sum($average)/count($average);
 					echo $average;
+					echo '<script type="text/javascript">buildChart();</script>';
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
@@ -396,7 +474,8 @@
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
-					$headers = array('Tid', 'Datum', 'Larm');
+					$headers = array('Datum', 'Tid', 'Larm');
+					echo "<table style='width:50%;' id='myTable'>";
 					create_table($headers);
 
 					$rows = array();
@@ -411,8 +490,8 @@
 
 					foreach($rows as $value) {
 						if ($temp != 0) {
-							echo "<tr><td>" .$Tid. "</td>";
-							echo "<td>" .$Start. "</td>";
+							echo "<tr><td>" .$Start. "</td>";
+							echo "<td>" .$Tid. "</td>";
 							echo "<td>" .$Larm. "</td></tr>";
 						}
 
@@ -438,20 +517,25 @@
 					COUNT(message_text) As Antal,
 					message_text As Larm
 		    			FROM alarm_tid WHERE (message_text LIKE '%Stn ".$x."%' OR message_text LIKE '%Station ".$x."%')
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
 					$exclude_varning UNION ";
 				}
 
 				$sql .= "SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) DIV 60 AS Tid,
 				COUNT(message_text) As Antal,
 				message_text As Larm
-				FROM alarm_tid WHERE message_text NOT LIKE '%Stn%' AND message_text NOT LIKE '%Station %'
+				FROM alarm_tid
+				WHERE message_text NOT LIKE '%Stn%' AND message_text NOT LIKE '%Station %'
+				AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
 				$exclude_varning";
 
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
-					$headers = array('Tid', 'Antal', 'Larm');
+					$headers = array('Tid', 'Antal');
+					echo "<table style='width:40%;' id='myTable'>";
 					create_table($headers);
+					echo "<th style='width:10%;'>Larm</th>";
 
 					$x = 2;
 					while($row = $result->fetch_assoc()) {
@@ -464,7 +548,7 @@
 			}
 
 			function produktion() {
-				$sql = "SELECT * FROM produktion";
+				$sql = "SELECT * FROM produktion ORDER BY `produktion`.`datum` DESC";
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
@@ -475,13 +559,20 @@
 						}
 					array_push($headers, 'kassV', 'kassH', 'date_start', 'date_end');
 
+					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
 					while($row = $result->fetch_assoc()) {
 						if ($row['date_start'] != null) {
 							$echo = "<tr>";
 							foreach ($headers as $key) {
-								$echo .= "<td>" . $row[$key] . "</td>";
+
+								if ($row[$key] != "") {
+									$echo .= "<td id='test'>" . $row[$key] . "</td>";
+								} else {
+									$echo .= "<td id='test'>" . "-" . "</td>";
+								}
+
 							}
 							$echo .= "</tr>";
 							$date_start = new DateTime($row['date_start']);
@@ -500,49 +591,53 @@
 			}
 
 			function TAKOEE() {
-				$max_prod = 200;
-				$produktionstid = 0;
-				$produktion = 0;
-				$kass = 100;
-				$stopptid = 0;
+				$max_prod = 250 / 60;
+
+				echo "<p align='center'>Tillgänglighet = (Produktionstid - Stopptid) / Produktionstid</p>";
+				echo "<p align='center'>Anläggningsutbyte = (Produktion / Produktionstid) / max produktion</p>";
+				echo "<p align='center'>Kvalite = (Produktion - Kass) / Produktion</p>";
+				echo "<p align='center'>OEE = Tillgänglighet * Anläggningsutbyte * Kvalite</p>";
 
 				$sum_antal = "(select(";
 				for ($x=0; $x <= 22; $x++) {
-					$sum_antal .= "produktion." . $x . " + ";
+					$sum_antal .= "COALESCE(produktion." . $x . ", 0) + ";
 				}
-				$sum_antal .= "produktion.23))";
+				$sum_antal .= "COALESCE(produktion.23, 0)))";
 
 				$sql = "select produktion.datum,
 						SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
 						".$sum_antal." As produktion,
 						(select(produktion.kassV + produktion.kassH)) As kass,
 						produktion.date_start,
-						produktion.date_end
+						produktion.date_end,
+						produktion.idle
 						from produktion
 						left join alarm_tid
 						on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
 						GROUP by date(alarm_tid.message_start) DESC;";
 
 				$result = get_data($sql);
 
 				$headers = array('Datum', 'Produktion', 'Produktionstid', 'Stopptid', 'Kass', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
+				echo "<table style='width:70%;' id='myTable'>";
 				create_table($headers);
 				echo "<br>";
 
 				while($row = $result->fetch_assoc()) {
 					$produktion = $row['produktion'];
-					$produktionstid = (strtotime($row["date_end"]) - strtotime($row["date_start"])) / 3600;
-					$stopptid = $row['stopptid'] / 60;
+					$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
+					$stopptid = $row['stopptid'];
 					$kass = $row['kass'];
 
 					if ($produktionstid != 0 && $produktion != 0) {
 						$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
-						$Anläggningsutbyte = ($produktion / $produktionstid) / $max_prod;
+						$anläggningsutbyte = ($produktion / $produktionstid) / $max_prod;
 						$kvalite = ($produktion - $kass) / $produktion;
-						$OEE = $tillgänglighet * $Anläggningsutbyte * $kvalite;
+						$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
 
-						echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv($produktionstid,1, 2)  . "</td><td>" . bcdiv($stopptid,1, 2) . "</td><td>" .
-							$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($Anläggningsutbyte) * 100, 1, 2) . "%" .
+						echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
+							$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
 							 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
 					}
 				}
@@ -604,6 +699,8 @@
 
 
 		?>
+
+
 
 	</body>
 </hmtl>
