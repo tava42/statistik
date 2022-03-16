@@ -1,0 +1,85 @@
+body {
+	/* background-image: url("pexels-stephan-seeber-1261728.jpg"); */
+	  margin: 0;
+}
+
+.header {
+	/* background-color: #B9CFE6; */
+	align: center;
+}
+.navbar {
+  overflow: hidden;
+  float: center;
+  /* background-color: #B9CFE6; */
+  /* position: sticky;
+  position: -webkit-sticky;
+  top: 0; */
+}
+
+
+
+table {
+	box-shadow: 0 4px 8px 0 rgba(1, 1, 0, 0.5), 0 6px 20px 0 rgba(1, 1, 0, 0.5);
+	table-layout:fixed;
+	border: 1px solid #1c87c9;
+	border-radius: 5px;
+	border-width: 1px;
+	border-color: #6496C8;
+	border-collapse: collapse;
+	color: #000000;
+	font-family: Times New Roman;
+	font-size: 17px;
+	text-align: left;
+	margin-left: auto;
+	margin-right: auto;
+	width: 80%;
+}
+
+.Datum { width: 12%; }
+.År { width: 6%; }
+.Vecka { width: 6%; }
+.Minuter { width: 6%; }
+.Sekunder { width: 6%; }
+.Tid { width: 6%; }
+.Antal { width: 6%; }
+.Larm { width: 40%; }
+.date_start { width: 12%; }
+.date_end { width: 12%; }
+.kassV { width: 4%; }
+.kassH { width: 4%; }
+
+td:hover {
+	overflow: visible;
+}
+
+th {
+	background-color: #6496C8;
+	color: white;
+}
+
+td {
+	white-space: nowrap;
+ 	overflow: hidden;
+  	text-overflow: ellipsis;
+}
+
+tr:nth-child(even) {
+	background-color: #F2F2F2
+}
+
+tr:hover {
+     background-color: #B9CFE6
+}
+
+.button {
+	border: none;
+	padding: 7px 20px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+}
+
+#line-chart {
+	max-width: 80%;
+     margin: auto;
+}
