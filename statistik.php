@@ -5,7 +5,7 @@
 	</head>
 
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.js"></script>
 
 	<body>
 		<!-- <div class="header" align="center">
@@ -37,15 +37,16 @@
 				<input type="submit" name="search_date" class="button" value="Sök">
 				<input type="submit" name="search_utveckling" class="button" value="Sök utveckling">
 
-				<br>
-				<br>
-				<input type="text" id="search" align="right" name="search_form" placeholder="Sök efter larm">
+				<input type="text" id="search" align="right" name="search_form" size="41px" placeholder="Sök efter larm">
 				<input type="submit" name="search_larm" class="button" value="Sök">
 				<input type="submit" name="search_all" class="button" value="Sök allt">
 				</form>
 				<br>
 
 		</nav>
+		<!-- <hr class="line"> -->
+		<br>
+		<br>
 
 		<script type="text/javascript">
 
@@ -115,31 +116,22 @@
 				  }
 			}
 
-			function chartTAKOEE() {
-
+			function dashboardTAKOEE() {
 				var label = [];
-				var produktion = [];
-				var produktionstid = [];
-				var stopptid = [];
-				var kass = [];
 				var t = [];
 				var a = [];
 				var k = [];
 				var oee = [];
 
-				for ( var i = 1; i < myTable.rows.length; i++ ) {
-				    label.push(myTable.rows[i].cells[0].innerHTML);
-				    produktion.push(myTable.rows[i].cells[1].innerHTML);
-				    produktionstid.push(myTable.rows[i].cells[2].innerHTML * 60);
-				    stopptid.push(myTable.rows[i].cells[3].innerHTML * 60);
-				    kass.push(myTable.rows[i].cells[4].innerHTML);
-				    t.push(myTable.rows[i].cells[5].innerHTML.replace('%', ''));
-				    a.push(myTable.rows[i].cells[6].innerHTML.replace('%', ''));
-				    k.push(myTable.rows[i].cells[7].innerHTML.replace('%', ''));
-				    oee.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
+				for ( var i = 1; i < takoee.rows.length; i++ ) {
+				    label.push(takoee.rows[i].cells[0].innerHTML);
+				    t.push(takoee.rows[i].cells[1].innerHTML.replace('%', ''));
+				    a.push(takoee.rows[i].cells[2].innerHTML.replace('%', ''));
+				    k.push(takoee.rows[i].cells[3].innerHTML.replace('%', ''));
+				    oee.push(takoee.rows[i].cells[4].innerHTML.replace('%', ''));
 				}
 
-				var ctx = document.getElementById("line-chart").getContext("2d");
+				var ctx = document.getElementById("dashboardTAKOEE").getContext("2d");
 				ctx.canvas.width = 40;
 				ctx.canvas.height = 10;
 
@@ -147,42 +139,10 @@
 					type: 'line',
 					data: {
 					    labels: label.reverse(),
-					    datasets: [{
-							  label: "Produktion",
-							  data: produktion.reverse(),
-							  fill: false,
-							  display: false,
-							  backgroundColor: "blue",
-							  borderColor: "blue",
-							  borderCapStyle: 'butt'
-						  },
-						  {
-							  label: "Produktionstid",
-							  data: produktionstid.reverse(),
-							  fill: false,
-							  backgroundColor: "green",
-							  borderColor: "green",
-							  borderCapStyle: 'butt'
-					   	   },
-						   {
-							  label: "Stopptid",
-							  data: stopptid.reverse(),
-							  fill: false,
-							  backgroundColor: "red",
-							  borderColor: "red",
-							  borderCapStyle: 'butt'
-					    	   },
-						   {
-							  label: "Kass",
-							  data: kass.reverse(),
-							  fill: false,
-							  backgroundColor: "blue",
-							  borderColor: "blue",
-							  borderCapStyle: 'butt'
-					        },
+					    datasets: [
 						   {
 							  label: "Tillgänglighet",
-							  type: "bar",
+							  type: "line",
 							  data: t.reverse(),
 							  fill: false,
 							  backgroundColor: "green",
@@ -215,6 +175,272 @@
 						   },
 				   		]
 				   	}
+				});
+			}
+
+			function dashboardUtveckling(type) {
+				sortTable(5);
+				var incCanvas;
+				var decCanvas
+				if (type == "dash") {
+					decCanvas = "decDashUtv";
+					incCanvas = "incDashUtv";
+					var rows = 5;
+				} else if (type == "utveckling") {
+					decCanvas = "decUtveckling";
+					incCanvas = "incUtveckling";
+					var rows = 20;
+				}
+				var maxTid = [];
+				var minTid = [];
+				var decAntal = [];
+				var incAntal = [];
+				var decLarm = [];
+				var incLarm = [];
+
+				for ( var i = 1; i <= rows; i++ ) {
+					if (myTable.rows[i].cells[5].innerHTML > 0) {
+						incAntal.push(myTable.rows[i].cells[5].innerHTML);
+						incLarm.push(myTable.rows[i].cells[6].innerHTML);
+					}
+
+				}
+				// decAntal.push(0);
+				for ( var i = myTable.rows.length - 1; i >= (myTable.rows.length - rows); i-- ) {
+					if (myTable.rows[i].cells[5].innerHTML < 0) {
+					     decAntal.push(myTable.rows[i].cells[5].innerHTML);
+						decLarm.push(myTable.rows[i].cells[6].innerHTML);
+					} else {
+						decLarm.push("-");
+					}
+				}
+
+				// incAntal.push(250);
+				var decMax = Math.min.apply(Math, decAntal);
+				var incMax = Math.max.apply(Math, incAntal);
+
+				if (decMax < 0) {
+					decMax = Math.abs(decMax);
+				}
+				var decTick = 0;
+				var incTick = 0;
+
+				if (decMax > incMax) {
+					incTick = decMax;
+					decTick = -Math.abs(decMax);
+				} else if (incMax > decMax) {
+					incTick = incMax;
+					decTick = -Math.abs(incMax);
+				} else {
+					incTick = incMax;
+					decTick = incMax;
+				}
+				// console.log(document.getElementByName("decDashUtv"));
+				//  if(typeof(document.getElementById("decDashUtv")) != 'decDashUtv' && document.getElementById("decDashUtv") != null) {
+				// 	console.log(document.getElementById("decDashUtv").innerHTML)
+				// } else if(typeof(document.getElementById("incUtveckling")) != 'incUtveckling' && document.getElementById("incUtveckling") != null) {
+				// 	console.log(document.getElementById("incUtveckling").innerHTML)
+				// }
+
+				var ctx2 = document.getElementById(decCanvas).getContext("2d");
+				var min = new Chart(ctx2, {
+					type: 'bar',
+					data: {
+						labels: decLarm,
+						datasets: [{
+							label: 'Antal minskat',
+							data: decAntal,
+							backgroundColor: "#44a73a",
+						 	fill: false,
+					  	}]
+				  	},
+				  	options: {
+						indexAxis: 'y',
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							legend: {
+								title: {
+									// text: 'asdoksä',
+									// display: true,
+								}
+							}
+						},
+						scales: {
+							y: {
+								position: 'right',
+
+								stacked: true,
+								labelAutoFit: true,
+							},
+							x: {
+								reverse: true,
+								// beginAtZero: true,
+								suggestedMin: decTick,
+								suggestedMax: 0,
+							}
+						}
+					}
+				});
+
+				var ctx = document.getElementById(incCanvas).getContext("2d");
+
+				var max = new Chart(ctx, {
+					type: 'bar',
+					data: {
+	    					labels: incLarm,
+						datasets: [{
+							indexAxis: 'y',
+							label: 'Antal ökat',
+							data: incAntal,
+							backgroundColor: "#d12f2f",
+							fill: false,
+					  	}]
+				  	},
+					options: {
+						indexAxis: 'y',
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							legend: {
+								title: {
+									// text: 'asdoksä',
+									// display: true,
+								}
+							}
+						},
+						scales: {
+							y: {
+								stacked: true,
+								labelAutoFit: true,
+							},
+							x: {
+								reverse: true,
+								// beginAtZero: true,
+								suggestedMin: 0,
+								suggestedMax: incTick,
+
+							}
+						}
+					}
+				});
+
+			}
+
+			function chartTAKOEE() {
+
+				var label = [];
+				var produktion = [];
+				var produktionstid = [];
+				var stopptid = [];
+				var kass = [];
+				var t = [];
+				var a = [];
+				var k = [];
+				var oee = [];
+
+				for ( var i = 1; i < myTable.rows.length; i++ ) {
+				    label.push(myTable.rows[i].cells[0].innerHTML);
+				    produktion.push(myTable.rows[i].cells[1].innerHTML);
+				    produktionstid.push(myTable.rows[i].cells[2].innerHTML * 60);
+				    stopptid.push(myTable.rows[i].cells[3].innerHTML * 60);
+				    kass.push(myTable.rows[i].cells[4].innerHTML);
+				    t.push(myTable.rows[i].cells[5].innerHTML.replace('%', ''));
+				    a.push(myTable.rows[i].cells[6].innerHTML.replace('%', ''));
+				    k.push(myTable.rows[i].cells[7].innerHTML.replace('%', ''));
+				    oee.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
+				}
+
+				var ctx = document.getElementById("prodChart").getContext("2d");
+
+				var myChart = new Chart(ctx, {
+					type: 'line',
+					data: {
+					    labels: label.reverse(),
+					    datasets: [{
+							  label: "Produktion",
+							  data: produktion.reverse(),
+							  fill: false,
+							  hidden: true,
+							  backgroundColor: "#15998E",
+							  borderColor: "#15998E",
+							  borderCapStyle: 'butt'
+						  },
+						  {
+							  label: "Produktionstid",
+							  data: produktionstid.reverse(),
+							  fill: false,
+							  hidden: true,
+							  backgroundColor: "#45B08C",
+							  borderColor: "#45B08C",
+							  borderCapStyle: 'butt'
+					   	   },
+						   {
+							  label: "Stopptid",
+							  data: stopptid.reverse(),
+							  fill: false,
+							  hidden: true,
+							  backgroundColor: "#48BCD1",
+							  borderColor: "#48BCD1",
+							  borderCapStyle: 'butt'
+					    	   },
+						   {
+							  label: "Kass",
+							  data: kass.reverse(),
+							  fill: false,
+							  hidden: true,
+							  backgroundColor: "#C0DCEC",
+							  borderColor: "#C0DCEC",
+							  borderCapStyle: 'butt'
+					        },
+						   {
+							  label: "Tillgänglighet",
+							  data: t.reverse(),
+							  fill: false,
+							  backgroundColor: "#68BBE3",
+							  borderColor: "#68BBE3",
+							  borderCapStyle: 'butt'
+						   },
+						   {
+							  label: "Anläggningsutbyte",
+							  data: a.reverse(),
+							  fill: false,
+							  backgroundColor: "#0E86D4",
+							  borderColor: "#0E86D4",
+							  borderCapStyle: 'butt'
+						   },
+						   {
+							  label: "Kvalite",
+							  data: k.reverse(),
+							  fill: false,
+							  backgroundColor: "#055C9D",
+							  borderColor: "#055C9D",
+							  borderCapStyle: 'butt'
+						   },
+						   {
+							  label: "OEE",
+							  data: oee.reverse(),
+							  fill: false,
+							  backgroundColor: "#003060",
+							  borderColor: "#003060",
+							  borderCapStyle: 'butt'
+						}]
+					},
+						options: {
+							lineTension: 0.4,
+		  					responsive: true,
+		  					maintainAspectRatio: false,
+							scales: {
+								y: {
+									ticks: {
+										beginAtZero: true,
+										min: 10,
+										max: 1000,
+									}
+								}
+							}
+					   	}
+
 				});
 			}
 
@@ -309,9 +535,7 @@
 					count = false;
 
 				}
-				var ctx = document.getElementById("line-chart").getContext("2d");
-				ctx.canvas.width = 40;
-				ctx.canvas.height = 10;
+				var ctx = document.getElementById("prodChart").getContext("2d");
 
 				// rows = [];
 				// for ( var i = 0; i < 24; i++ ) {
@@ -324,25 +548,30 @@
 					type: 'bar',
 					data: {
 					    labels: label,
-					    datasets: [
-						    {
-							    label: "Produktion / aktiva timmar",
-							    type: "line",
-							    data: avg,
-							    fill: false,
-							    backgroundColor: '#6496C8',
-							    borderColor: '#6496C8',
-							    borderCapStyle: 'butt'
+					    datasets: [{
+							label: "Produktion / aktiva timmar",
+							type: "line",
+							data: avg,
+							backgroundColor: '#6496C8',
+							borderColor: '#6496C8',
 						    },
 						    {
-							    label: "Produktion vardagar / aktiva vardagar",
-							    data: weekdays,
-							    fill: false,
-							    backgroundColor: '#B9CFE6',
-							    borderColor: '#B9CFE6',
-							    borderCapStyle: 'butt'
-						    }
-
+							label: "Produktion vardagar / aktiva vardagar",
+							data: weekdays,
+							backgroundColor: '#B9CFE6',
+							borderColor: '#B9CFE6',
+						    }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								// beginAtZero: true
+							}
+						}
+					}
+				});
 					    // {
 						//     label: "Produktion / aktiva dagar",
 						//     data: kl,
@@ -351,9 +580,9 @@
 						//     borderColor: 'green',
 						//     borderCapStyle: 'butt'
 					    // }
-				    ]
-				   }
-				});
+
+
+
 			}
 
 
@@ -400,6 +629,53 @@
 			}
 
 			function dashboard() {
+				$dashboard = true;
+				echo "<div style='display: none'>";
+
+				$takoee = TAKOEE($dashboard);
+				$headers = array('Datum', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
+				echo "<table style='width:75%;' id='takoee'>";
+				create_table($headers);
+
+				foreach ($takoee as $row) {
+					$produktion = $row['produktion'];
+					$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
+					$stopptid = $row['stopptid'];
+					$kass = $row['kass'];
+					if ($produktionstid != 0 && $produktion != 0) {
+						$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
+						$anläggningsutbyte = ($produktion / $produktionstid) / (250 / 60);
+						$kvalite = ($produktion - $kass) / $produktion;
+						$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
+
+						echo "<tr><td>" . $row['datum'] . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
+							 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
+
+					}
+				}
+
+
+				echo "</tr></table>";
+				echo "</div>";
+
+				echo "<div class='wrapper'>
+						<p align='center'> Utveckling antal larm </p>
+						<div class='utvl'>
+							<canvas id='incDashUtv'></canvas>
+						</div>
+						<div class='utvr'>
+							<canvas id='decDashUtv'></canvas>
+						</div>";
+
+				echo "<div style='display: none'>";
+					$search_date = false;
+					utveckling($search_date, $dashboard);
+				echo "</div></div>";
+
+
+
+				// echo "<canvas id='dashboardTAKOEE' width='200' height='400'></canvas>";
+				// echo '<script type="text/javascript">dashboardTAKOEE();</script><br><br>';
 
 			}
 
@@ -421,22 +697,32 @@
 
 
 				if ($result->num_rows > 0) {
+					echo "<div id='stats' align='center'>
+							<p class='inline' id='antal'></p>
+							<p class='inline' id='tid'></p>
+						</div>";
 					$headers = array("Minuter", "Antal", "Larm");
-					echo "<table style='width:40%;' id='myTable'>";
+
+					echo "<table width='80%' id='myTable'>";
 					create_table($headers);
 
 					$sum_antal = 0;
-					$data = array();
+					$sum_tid = 0;
 
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . bcdiv(($row["Tid"]), 1, 1) . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
-						$sum_antal = $sum_antal + $row['Antal'];
-						array_push($data, $row["Tid"]);
+						$sum_antal += $row["Antal"];
+						$sum_tid += $row["Tid"];
 					}
 
 					echo "</tr>";
 					echo "</table><br><br>";
-					echo $sum_antal;
+					$sum_antal;
+					echo "<script type='text/javascript'>
+							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($sum_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
+							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
+						</script><br><br>";
+					// echo "</div>";
 
 					} else {
 					echo "<p align='center'>Inga resultat</p>";
@@ -444,26 +730,44 @@
 
 			}
 
-			function utveckling($search_date) {
-				$from = date('Y-m-d', strtotime($_POST['dateFrom']));
-				$to = date('Y-m-d', strtotime($_POST['dateTo']));
-				$exclude_varning = check_exclude();
-				//	echo "Utveckling mellan " . date('Y-m-d', strtotime($_POST['dateFrom'] . '+30 days'));
+			function utveckling($search_date, $dashboard) {
+				$exclude_varning = " AND message_text NOT LIKE '%Varning%'
+					AND message_text NOT LIKE '%Lägg i sista%'
+					AND message_text NOT LIKE '%BYT PALL%'
+					";
+				$first = 'CURRENT_DATE - INTERVAL 60 DAY AND current_date ';
+				$second = 'current_date - INTERVAL 120 DAY AND current_date - INTERVAL 91 DAY ';
+				if ($dashboard == false) {
+					$exclude_varning = check_exclude();
+					$from = date('Y-m-d', strtotime($_POST['dateFrom']));
+					$to = date('Y-m-d', strtotime($_POST['dateTo']));
 
-				$start = new DateTime($_POST['dateFrom'] . '-1 days');
-				$end = new DateTime($_POST['dateTo']);
-				$diff = $start->diff($end);
+					//	echo "Utveckling mellan " . date('Y-m-d', strtotime($_POST['dateFrom'] . '+30 days'));
 
-			 	if ($search_date) {
-				 	$first = '"' . $from . '" AND "' . $to . '"';
-				 	$second = '"'. date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) .
-					 '" AND "' . date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . '"';
-					echo $first . '<br>';
-					echo $second;
-				} else {
-					echo "<p align='center'>Denna månaden jämfört med förra månaden</p>";
-					$first = 'CURRENT_DATE - INTERVAL 30 DAY AND current_date ';
-					$second = 'current_date - INTERVAL 61 DAY AND current_date - INTERVAL 31 DAY ';
+					$start = new DateTime($_POST['dateFrom'] . '-1 days');
+					$end = new DateTime($_POST['dateTo']);
+					$diff = $start->diff($end);
+
+				 	if ($search_date) {
+					 	$first = '"' . $from . '" AND "' . $to . '"';
+					 	$second = '"'. date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) .
+						 '" AND "' . date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . '"';
+						echo $first . '<br>';
+						echo $second;
+					} else {
+						echo "<p align='center'>Denna månaden jämfört med förra månaden</p>";
+						$first = 'CURRENT_DATE - INTERVAL 60 DAY AND current_date ';
+						$second = 'current_date - INTERVAL 100 DAY AND current_date - INTERVAL 91 DAY ';
+					}
+
+					echo "<div class='wrapperUtv'>
+							<div class='decUtv'>
+								<canvas id='incUtveckling'></canvas>
+							</div>
+							<div class='decUtv'>
+								<canvas id='decUtveckling'></canvas>
+							</div>
+						</div>";
 				}
 
 				$sql = "SELECT
@@ -491,7 +795,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("NewTid", "NewAntal", "OldTid", "OldAntal", "Diff Tid", "Diff Antal", "Larm");
-					echo "<table style='width:70%;' id='myTable'>";
+					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
 					$rows = array();
@@ -540,7 +844,12 @@
 					}
 					echo "</tr>";
 					echo "</table><br><br>";
-					echo '<script type="text/javascript">sortTable(4);</script>';
+					if ($dashboard == false) {
+						$type = "utveckling";
+					} else {
+						$type = "dash";
+					}
+					echo "<script type='text/javascript'>dashboardUtveckling('".$type."');</script><br><br>";
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
@@ -565,7 +874,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("Sekunder", "Larm");
-					echo "<table style='width:40%;' id='myTable'>";
+					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
 					while($row = $result->fetch_assoc()) {
@@ -597,7 +906,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("Minuter", "Antal", "Larm");
-					echo "<table style='width:40%;' id='myTable'>";
+					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
 					$sum = 0;
@@ -648,6 +957,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("År", "Vecka", "Minuter", "Antal", "Larm");
+					echo "<div class='wrapper'>";
 					echo "<table style='width:50%;' id='myTable'>";
 					create_table($headers);
 					echo "<canvas id='line-chart' width='200' height='400'></canvas>";
@@ -673,6 +983,7 @@
 					echo "</table><br><br>";
 					// $average = array_sum($average)/count($average);
 					// echo $average;
+					echo "</div>";
 					echo '<script type="text/javascript">chartSearch_larm();</script>';
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
@@ -755,14 +1066,14 @@
 					message_text AS Larm,
 					message_start as Start
 					FROM alarm_tid
-					WHERE message_text LIKE '%".$search_larm."%'
+					WHERE message_text LIKE '%".$search_larm."%' AND date(message_start) >= current_date - INTERVAL 30 DAY
 					ORDER BY message_start DESC;";
 
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
 					$headers = array('Datum', 'Tid', 'Larm');
-					echo "<br><table style='width:50%;' id='myTable'>";
+					echo "<br><table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
 					$rows = array();
@@ -821,7 +1132,7 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array('Tid', 'Antal');
-					echo "<table style='width:40%;' id='myTable'>";
+					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 					echo "<th style='width:10%;'>Larm</th>";
 
@@ -832,6 +1143,11 @@
 						echo "<tr><td>" . $row["Tid"] . "</td><td>" . $row["Antal"] . "</td><td>" . $stn . "</td></tr>";
 						$x++;
 					}
+
+					echo "</table><br><br>";
+
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
 				}
 			}
 
@@ -846,8 +1162,13 @@
 							array_push($headers, $x);
 						}
 					array_push($headers, 'kassV', 'kassH', 'date_start', 'date_end');
-					echo "<canvas id='line-chart' width='200' height='400'></canvas>";
-					echo "<table style='width:80%;' id='myTable'>";
+
+					// echo	"<div class='wrapperProdchart'>
+					// 		<canvas id='line-chart'></canvas>
+					// 	</div>";
+					echo "<div class='wrapper'>";
+					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
+					echo "<table style='width:100%;' id='myTable'>";
 					create_table($headers);
 
 					while($row = $result->fetch_assoc()) {
@@ -873,23 +1194,15 @@
 
 					echo "</tr>";
 					echo "</table><br><br>";
+					echo "</div>";
 					echo '<script type="text/javascript">chartProduktion();</script>';
 					} else {
 					echo "<p align='center'>Inga resultat</p>";
 					}
 			}
 
-			function TAKOEE() {
+			function TAKOEE($dashboard) {
 				$max_prod = 250 / 60;
-
-				echo "<div style='text-align: center;'>
-						<div style='display: inline-block; text-align: left;'>
-							<p>Tillgänglighet = (Produktionstid - Stopptid) / Produktionstid</p>
-							<p>Anläggningsutbyte = (Produktion / Produktionstid) / max produktion</p>
-							<p>Kvalite = (Produktion - Kass) / Produktion</p>
-							<p>OEE = Tillgänglighet * Anläggningsutbyte * Kvalite</p>
-						</div>
-					</div>";
 
 				$sum_antal = "(select(";
 				for ($x=0; $x <= 22; $x++) {
@@ -908,90 +1221,135 @@
 						left join alarm_tid
 						on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
 						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
+						WHERE alarm_tid.message_start > '2022-02-02'
 						GROUP by date(alarm_tid.message_start) DESC;";
 
 				$sql2 = "SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 as stopptid, message_ FROM alarm";
 				$result = get_data($sql);
 
-				$headers = array('Datum', 'Produktion', 'Produktionstid', 'Stopptid', 'Kass', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
-				echo "<canvas id='line-chart'></canvas>";
-				echo "<table style='width:75%;' id='myTable'>";
-				create_table($headers);
-				echo "<br>";
+				$data = $result->fetch_all(MYSQLI_ASSOC);
+				// $range = $result_dates->fetch_all(MYSQLI_ASSOC);
 
-				while($row = $result->fetch_assoc()) {
-					$produktion = $row['produktion'];
-					$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
-					$stopptid = $row['stopptid'];
-					$kass = $row['kass'];
+				if ($dashboard == false) {
+					echo "<div style='text-align: center;'>
+							<div style='display: inline-block; text-align: left;'>
+								<p>Tillgänglighet = (Produktionstid - Stopptid) / Produktionstid</p>
+								<p>Anläggningsutbyte = (Produktion / Produktionstid) / max produktion</p>
+								<p>Kvalite = (Produktion - Kass) / Produktion</p>
+								<p>OEE = Tillgänglighet * Anläggningsutbyte * Kvalite</p>
+							</div>
+						</div>";
 
-					if ($produktionstid != 0 && $produktion != 0) {
-						$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
-						$anläggningsutbyte = ($produktion / $produktionstid) / $max_prod;
-						$kvalite = ($produktion - $kass) / $produktion;
-						$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
+					$headers = array('Datum', 'Produktion', 'Produktionstid', 'Stopptid', 'Kass', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
+					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
+					echo "<table style='width:100%;' id='myTable'>";
+					create_table($headers);
+					echo "<br>";
 
-						echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
-							$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
-							 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
+					foreach ($data as $row ) {
+						$produktion = $row['produktion'];
+						$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
+						$stopptid = $row['stopptid'];
+						$kass = $row['kass'];
+
+						if ($produktionstid != 0 && $produktion != 0) {
+							$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
+							$anläggningsutbyte = ($produktion / $produktionstid) / $max_prod;
+							$kvalite = ($produktion - $kass) / $produktion;
+							$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
+
+							echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
+								$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
+								 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
+						}
 					}
+					echo "</tr></table>";
+					echo '<script type="text/javascript">chartTAKOEE();</script><br><br>';
+				} else {
+					return $data;
+					echo "true";
 				}
-				echo "</tr></table>";
-				echo '<script type="text/javascript">chartTAKOEE();</script><br><br>';
+
 			}
 
 
 			if (isset($_POST['today'])) {
-				echo "<p align='center'>Idag</p>";
+				echo "<div class='wrapperRecent'>";
+				echo "<p class='recentPeriod' align='center'>Idag</p>";
 				$interval = " = CURRENT_DATE() ";
 				recent($interval);
+				echo "</div>";
 
 			} else if (isset($_POST['last_week'])) {
-				echo "<p align='center'>Senaste 7 dagar</p>";
+				echo "<div class='wrapperRecent'>";
+				echo "<p class='recentPeriod' align='center'>Senaste 7 dagar</p>";
 				$interval = " >= current_date - INTERVAL 7 DAY";
 				recent($interval);
+				echo "</div>";
 
 			} else if (isset($_POST['last_month'])) {
-				echo "<p align='center'>Senaste 30 dagar</p>";
+				echo "<div class='wrapperRecent'>";
+				echo "<p class='recentPeriod' align='center'>Senaste 30 dagar</p>";
 				$interval = " >= current_date - INTERVAL 30 DAY";
 				recent($interval);
+				echo "</div>";
 
 			} else if (isset($_POST['avg_time'])) {
+				echo "<div class='wrapperRecent'>";
 				echo "<p align='center'>Genomsnittlig stopptid per larm</p>";
 				average();
+				echo "</div>";
 
 			} else if (isset($_POST['search_date'])) {
+				echo "<div class='wrapperRecent'>";
 				$from = date('Y-m-d', strtotime($_POST['dateFrom']));
 				$to = date('Y-m-d', strtotime($_POST['dateTo']));
 				echo "<p align='center'>Från: $from  Till:  $to </p>";
 				search_date($from, $to);
+				echo "</div>";
 
 			} else if (isset($_POST['utveckling'])) {
 				$search_date = false;
-				utveckling($search_date);
+				$dashboard = false;
+				echo "<div class='wrapper'>";
+				utveckling($search_date, $dashboard);
+				echo "</div>";
 
 			} else if (isset($_POST['search_utveckling'])) {
 				$search_date = true;
-				utveckling($search_date);
+				$dashboard = false;
+				echo "<div class='wrapper'>";
+				utveckling($search_date, $dashboard);
+				echo "</div>";
 
 			} else if (isset($_POST['search_larm'])) {
 				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
-				echo "<p align='center'>" . $search_larm . "</p>";
+				// echo "<p align='center'>" . $search_larm . "</p>";
 				search_larm($search_larm);
 
 			} else if (isset($_POST['search_all'])) {
 				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
+				echo "<div class='wrapperRecent'>";
 				search_all($search_larm);
+				echo "</div>";
 
 			} else if (isset($_POST['overview'])) {
-				overview();
+				echo "<div class='wrapperRecent'>";
+					overview();
+
 
 			} else if (isset($_POST['produktion'])) {
 				produktion();
 
 			} else if (isset($_POST['TAKOEE'])) {
-				TAKOEE();
+				$dashboard = false;
+				echo "<div class='wrapper'>";
+				TAKOEE($dashboard);
+				echo "</div>";
+			} else {
+				dashboard();
 		}
+
 
 
 		?>
