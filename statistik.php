@@ -2,15 +2,18 @@
 <html>
 	<head>
 	<link rel="stylesheet" href="style.css">
+	<script>
+		if ( window.history.replaceState ) {
+			window.history.replaceState( null, null, window.location.href );
+		}
+	</script>
 	</head>
 
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.js"></script>
+	<script src="jquery.min.js"></script>
 
 	<body>
-		<!-- <div class="header" align="center">
-			<p> Statistik Robotlinjen</p>
-		</div> -->
 		<nav class="navbar" align="center">
 			<br>
 				<form method="post">
@@ -44,10 +47,8 @@
 				<br>
 
 		</nav>
-		<!-- <hr class="line"> -->
 		<br>
 		<br>
-
 		<script type="text/javascript">
 
 			function sortTable(n) {
@@ -205,7 +206,6 @@
 					}
 
 				}
-				// decAntal.push(0);
 				for ( var i = myTable.rows.length - 1; i >= (myTable.rows.length - rows); i-- ) {
 					if (myTable.rows[i].cells[5].innerHTML < 0) {
 					     decAntal.push(myTable.rows[i].cells[5].innerHTML);
@@ -215,7 +215,6 @@
 					}
 				}
 
-				// incAntal.push(250);
 				var decMax = Math.min.apply(Math, decAntal);
 				var incMax = Math.max.apply(Math, incAntal);
 
@@ -235,12 +234,6 @@
 					incTick = incMax;
 					decTick = incMax;
 				}
-				// console.log(document.getElementByName("decDashUtv"));
-				//  if(typeof(document.getElementById("decDashUtv")) != 'decDashUtv' && document.getElementById("decDashUtv") != null) {
-				// 	console.log(document.getElementById("decDashUtv").innerHTML)
-				// } else if(typeof(document.getElementById("incUtveckling")) != 'incUtveckling' && document.getElementById("incUtveckling") != null) {
-				// 	console.log(document.getElementById("incUtveckling").innerHTML)
-				// }
 
 				var ctx2 = document.getElementById(decCanvas).getContext("2d");
 				var min = new Chart(ctx2, {
@@ -250,6 +243,7 @@
 						datasets: [{
 							label: 'Antal minskat',
 							data: decAntal,
+							labelLinks: decLarm,
 							backgroundColor: "#44a73a",
 						 	fill: false,
 					  	}]
@@ -293,6 +287,7 @@
 							indexAxis: 'y',
 							label: 'Antal ökat',
 							data: incAntal,
+							labelLinks: incLarm,
 							backgroundColor: "#d12f2f",
 							fill: false,
 					  	}]
@@ -325,6 +320,47 @@
 					}
 				});
 
+				function clickableScales(chart, click) {
+
+					const { ctx, canvas, scales: {x, y} } = chart;
+					const top = y.top
+					const left = y.left
+					const right = y.right
+					const bottom = y.bottom
+					const height = y.height / y.ticks.length;
+
+					//mouse coordinates
+					let rect = canvas.getBoundingClientRect();
+					const xCoor = click.clientX - rect.left;
+					const yCoor = click.clientY - rect.top;
+
+					for (let i = 0; i < y.ticks.length; i++) {
+						if(xCoor >= left && xCoor <= right && yCoor >= top + (height * i)
+						&& yCoor <= top + height + (height * i)) {
+							var larm = chart.data.datasets[0].labelLinks[i];
+
+							$.ajax({
+							    url: 'statistik.php',
+							    type: 'POST',
+							    data: { "ajax_larm": larm},
+							    success: function(response) {
+								    // $("#wrap").append(response);
+								    // load(response);
+								    document.write(response);
+							    }
+							});
+						}
+					}
+				}
+
+				max.canvas.addEventListener('click', (e) => {
+					var chart = max;
+					clickableScales(chart, e)
+				});
+				min.canvas.addEventListener('click', (e) => {
+					var chart = min;
+					clickableScales(chart, e)
+				});
 			}
 
 			function chartTAKOEE() {
@@ -475,18 +511,21 @@
 							  label: "Tid",
 							  data: tid.reverse(),
 							  fill: false,
+							  hidden: true,
+							  lineTension: 0.4,
 							  backgroundColor: "#6496C8",
 							  borderColor: "#6496C8",
-							  borderCapStyle: 'butt'
+							  // borderCapStyle: 'butt'
 						  },
 						  {
 							  label: "Antal",
 							  type: "bar",
 							  data: antal.reverse(),
 							  fill: false,
+							  lineTension: 0.4,
 							  backgroundColor: "#B9CFE6",
 							  borderColor: "#B9CFE6",
-							  borderCapStyle: 'butt'
+							  // borderCapStyle: 'butt'
 					   }
 				   ]
 				   }
@@ -537,13 +576,6 @@
 				}
 				var ctx = document.getElementById("prodChart").getContext("2d");
 
-				// rows = [];
-				// for ( var i = 0; i < 24; i++ ) {
-				// 	rows.push(`{label: 'kl${i}', data: kl[${i}].reverse(), fill: false, backgroundColor: 'red', borderColor: 'red', borderCapStyle: 'butt'}`);
-				// }
-				// // document.write(kl);
-				// document.write(rows);
-
 				var myChart = new Chart(ctx, {
 					type: 'bar',
 					data: {
@@ -565,6 +597,7 @@
 					options: {
 						responsive: true,
 						maintainAspectRatio: false,
+						lineTension: 0.4,
 						scales: {
 							y: {
 								// beginAtZero: true
@@ -658,7 +691,7 @@
 				echo "</tr></table>";
 				echo "</div>";
 
-				echo "<div class='wrapper'>
+				echo "<div id='wrap' class='wrapper'>
 						<p align='center'> Utveckling antal larm </p>
 						<div class='utvl'>
 							<canvas id='incDashUtv'></canvas>
@@ -735,8 +768,9 @@
 					AND message_text NOT LIKE '%Lägg i sista%'
 					AND message_text NOT LIKE '%BYT PALL%'
 					";
-				$first = 'CURRENT_DATE - INTERVAL 60 DAY AND current_date ';
-				$second = 'current_date - INTERVAL 120 DAY AND current_date - INTERVAL 91 DAY ';
+				$first = 'CURRENT_DATE - INTERVAL 7 DAY AND current_date ';
+				$second = 'current_date - INTERVAL 15 DAY AND current_date - INTERVAL 8 DAY ';
+
 				if ($dashboard == false) {
 					$exclude_varning = check_exclude();
 					$from = date('Y-m-d', strtotime($_POST['dateFrom']));
@@ -752,22 +786,14 @@
 					 	$first = '"' . $from . '" AND "' . $to . '"';
 					 	$second = '"'. date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) .
 						 '" AND "' . date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . '"';
-						echo $first . '<br>';
-						echo $second;
+						 echo "<br><div align='center'>" . date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) . " till " .
+						 	date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . " jämfört med " . $from . " till ". $to . "</div><br>";
 					} else {
 						echo "<p align='center'>Denna månaden jämfört med förra månaden</p>";
-						$first = 'CURRENT_DATE - INTERVAL 60 DAY AND current_date ';
-						$second = 'current_date - INTERVAL 100 DAY AND current_date - INTERVAL 91 DAY ';
+						$first = 'CURRENT_DATE - INTERVAL 30 DAY AND current_date ';
+						$second = 'current_date - INTERVAL 61 DAY AND current_date - INTERVAL 31 DAY ';
 					}
 
-					echo "<div class='wrapperUtv'>
-							<div class='decUtv'>
-								<canvas id='incUtveckling'></canvas>
-							</div>
-							<div class='decUtv'>
-								<canvas id='decUtveckling'></canvas>
-							</div>
-						</div>";
 				}
 
 				$sql = "SELECT
@@ -794,6 +820,16 @@
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
+					if ($dashboard == false) {
+						echo "<div class='wrapperUtv'>
+								<div class='decUtv'>
+									<canvas id='incUtveckling'></canvas>
+								</div>
+								<div class='decUtv'>
+									<canvas id='decUtveckling'></canvas>
+								</div>
+							</div>";
+					}
 					$headers = array("NewTid", "NewAntal", "OldTid", "OldAntal", "Diff Tid", "Diff Antal", "Larm");
 					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
@@ -905,27 +941,34 @@
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
+					echo "<div id='stats' align='center'>
+							<p class='inline' id='antal'></p>
+							<p class='inline' id='tid'></p>
+						</div>";
 					$headers = array("Minuter", "Antal", "Larm");
 					echo "<table style='width:80%;' id='myTable'>";
 					create_table($headers);
 
-					$sum = 0;
+					$sum_antal = 0;
+					$sum_tid = 0;
+
 					while($row = $result->fetch_assoc()) {
 						echo "<tr><td>" . bcdiv(($row["Tid"]), 1, 1) . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
-						$sum = $sum + $row["Tid"];
+						$sum_antal += $row["Antal"];
+						$sum_tid += $row["Tid"];
 					}
 					echo "</tr>";
 					echo "</table><br><br>";
-					echo "sum tid: " . $sum / 60 . " timmar";
-
+					echo "<script type='text/javascript'>
+							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($sum_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
+							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
+						</script><br><br>";
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
 			}
 
 			function search_larm($search_larm) {
-				$exclude_varning = check_exclude();
-
 				$sql_days = "SELECT
 					date(message_start) as datum,
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
@@ -937,30 +980,31 @@
 					GROUP BY DATE(message_start) DESC";
 
 				$sql_weeks = "SELECT
-					yearweek(message_start) as yearweek,
+					yearweek(message_start, 1) as yearweek,
 					YEAR(message_start) As Year,
-					WEEK(message_start) As Vecka,
+					WEEKOFYEAR(message_start) As Vecka,
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
 					COUNT(message_text) As Antal,
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE message_text = '".$search_larm."'
 					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
-					GROUP BY YEARWEEK(message_start) DESC";
+					GROUP BY YEARWEEK(message_start, 1) DESC";
 
-				$sql_range = "SELECT yearweek(message_start) as yearweek, YEAR(message_start) As Year, WEEK(message_start) As Week
+				$sql_range = "SELECT yearweek(message_start, 1) as yearweek, YEAR(message_start) As Year, WEEKOFYEAR(message_start) As Week
 					from alarm_tid
-					group by yearweek(message_start) DESC";
+					group by yearweek(message_start, 1) DESC";
+
 
 				$result = get_data($sql_weeks);
 				$result_dates = get_data($sql_range);
-
+				echo "<div class='wrapper'>";
 				if ($result->num_rows > 0) {
 					$headers = array("År", "Vecka", "Minuter", "Antal", "Larm");
-					echo "<div class='wrapper'>";
-					echo "<table style='width:50%;' id='myTable'>";
+
+					echo "<table style='width:65%;' id='myTable'>";
 					create_table($headers);
-					echo "<canvas id='line-chart' width='200' height='400'></canvas>";
+					echo "<canvas id='line-chart'></canvas>";
 
 					$data = $result->fetch_all(MYSQLI_ASSOC);
 					$range = $result_dates->fetch_all(MYSQLI_ASSOC);
@@ -983,16 +1027,15 @@
 					echo "</table><br><br>";
 					// $average = array_sum($average)/count($average);
 					// echo $average;
-					echo "</div>";
+
 					echo '<script type="text/javascript">chartSearch_larm();</script>';
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
+				echo "</div>";
 			}
 
 			function search_larm2($search_larm) {
-				$exclude_varning = check_exclude();
-
 				$sql_days = "SELECT
 					date(message_start) as Datum,
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
@@ -1027,7 +1070,8 @@
 
 				if ($result->num_rows > 0) {
 					$headers = array("Datum", "Minuter", "Antal", "Larm");
-					echo "<table style='width:50%;' id='myTable'>";
+					echo "<div class='wrapper'>";
+					echo "<table style='width:65%;' id='myTable'>";
 					create_table($headers);
 					echo "<canvas id='line-chart' width='200' height='400'></canvas>";
 
@@ -1053,6 +1097,7 @@
 					echo "</table><br><br>";
 					// $average = array_sum($average)/count($average);
 					// echo $average;
+					echo "</div>";
 					echo '<script type="text/javascript">chartSearch_larm();</script>';
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
@@ -1204,31 +1249,46 @@
 			function TAKOEE($dashboard) {
 				$max_prod = 250 / 60;
 
-				$sum_antal = "(select(";
+				$sum_prod = "(select(";
 				for ($x=0; $x <= 22; $x++) {
-					$sum_antal .= "COALESCE(produktion." . $x . ", 0) + ";
+					$sum_prod .= "COALESCE(produktion." . $x . ", 0) + ";
 				}
-				$sum_antal .= "COALESCE(produktion.23, 0)))";
+				$sum_prod .= "COALESCE(produktion.23, 0)))";
 
-				$sql = "select produktion.datum,
-						SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
-						".$sum_antal." As produktion,
-						(select(produktion.kassV + produktion.kassH)) As kass,
-						produktion.date_start,
-						produktion.date_end,
-						produktion.idle
-						from produktion
-						left join alarm_tid
-						on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
-						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
-						WHERE alarm_tid.message_start > '2022-02-02'
-						GROUP by date(alarm_tid.message_start) DESC;";
+				$sql = "select datum, ".$sum_prod." As produktion, (select(kassV + kassH)) As kass, date_start, date_end, idle
+					FROM produktion where date_start IS NOT NULL
+					ORDER BY produktion.datum DESC";
 
-				$sql2 = "SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end)) / 60 as stopptid, message_ FROM alarm";
+				$sql_stopptid = "SELECT date(message_start) As Datum, message_start, message_end, count(message_end)
+						FROM `alarm_tid`
+						WHERE date(message_start) > '2022-02-05' and message_text NOT LIKE '%Varning%'
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+						group by message_end ORDER BY `alarm_tid`.`message_start` DESC";
+
+				// $sql = "select produktion.datum,
+				// 		SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
+				// 		".$sum_antal." As produktion,
+				// 		(select(produktion.kassV + produktion.kassH)) As kass,
+				// 		produktion.date_start,
+				// 		produktion.date_end,
+				// 		produktion.idle
+				// 		from produktion
+				// 		left join alarm_tid
+				// 		on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
+				// 		AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 100
+				// 		WHERE alarm_tid.message_start > '2022-02-05'
+				// 		GROUP by date(alarm_tid.message_start) DESC;";
+
+				// $sql2 = "SELECT date(message_id) as datum, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, count(message_id) as count
+				// 	FROM `alarm_tid`
+				// 	WHERE date(message_start) > '2022-02-05' AND message_text NOT LIKE '%Varning%' AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+				// 	group by message_id having count(message_id) > 1 ORDER BY `datum` DESC";
+
 				$result = get_data($sql);
+				$stopptid = get_data($sql_stopptid);
 
 				$data = $result->fetch_all(MYSQLI_ASSOC);
-				// $range = $result_dates->fetch_all(MYSQLI_ASSOC);
+				$stopptid = $stopptid->fetch_all(MYSQLI_ASSOC);
 
 				if ($dashboard == false) {
 					echo "<div style='text-align: center;'>
@@ -1246,10 +1306,32 @@
 					create_table($headers);
 					echo "<br>";
 
+
+					$tid = [];
+					$sum_diff = 0;
+
+					$d = $stopptid[0]['Datum'];
+					foreach ($stopptid as $row) {
+						if ($d != $row['Datum']) {
+							$tid[$d] = $sum_diff;
+							$sum_diff = 0;
+						}
+
+						$d = $row['Datum'];
+						$start = strtotime($row['message_start']);
+						$end = strtotime($row['message_end']);
+
+						$sum_diff += abs($start - $end) / 60;
+
+						if(end($stopptid) !== $row) {
+							$tid[$d] = $sum_diff;
+						}
+					}
+
 					foreach ($data as $row ) {
 						$produktion = $row['produktion'];
 						$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
-						$stopptid = $row['stopptid'];
+						$stopptid = $tid[$row['datum']];
 						$kass = $row['kass'];
 
 						if ($produktionstid != 0 && $produktion != 0) {
@@ -1327,6 +1409,11 @@
 				// echo "<p align='center'>" . $search_larm . "</p>";
 				search_larm($search_larm);
 
+			} else if (isset($_POST['ajax_larm'])) {
+				$search_larm = $_POST['ajax_larm'];
+				// echo "<p align='center'>" . $search_larm . "</p>";
+				search_larm2($search_larm);
+
 			} else if (isset($_POST['search_all'])) {
 				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
 				echo "<div class='wrapperRecent'>";
@@ -1336,7 +1423,6 @@
 			} else if (isset($_POST['overview'])) {
 				echo "<div class='wrapperRecent'>";
 					overview();
-
 
 			} else if (isset($_POST['produktion'])) {
 				produktion();
@@ -1348,13 +1434,10 @@
 				echo "</div>";
 			} else {
 				dashboard();
+
 		}
 
-
-
 		?>
-
-
 
 	</body>
 </hmtl>
