@@ -20,8 +20,6 @@
 				<input type="submit" name="today" class="button" value="Idag">
 				<input type="submit" name="last_week" class="button" value="Senaste 7 dagar">
 				<input type="submit" name="last_month" class="button" value="Senaste 30 dagar">
-				<!-- <br>
-				<br> -->
 				<input type="submit" name="TAKOEE" class="button" value="TAKOEE">
 				<input type='submit' name='produktion' class='button' value='Produktion'>
 				<input type="submit" name="utveckling" class="button" value="Utveckling">
@@ -346,7 +344,8 @@
 							    success: function(response) {
 								    // $("#wrap").append(response);
 								    // load(response);
-								    document.write(response);
+								    // document.write(response);
+								    $("body").html(response);
 							    }
 							});
 						}
@@ -478,6 +477,34 @@
 					   	}
 
 				});
+
+				function onRowClick(tableId, callback) {
+					var table = document.getElementById(tableId),
+					     rows = table.getElementsByTagName("tr"), i;
+					for (i = 0; i < rows.length; i++) {
+					     table.rows[i].onclick = function (row) {
+					          return function () {
+					              callback(row);
+					          };
+					     }(table.rows[i]);
+					}
+				};
+
+				onRowClick("myTable", function (row){
+					var date = row.getElementsByTagName("td")[0].innerHTML;
+					$.ajax({
+	    					url: 'statistik.php',
+	    					type: 'POST',
+	    					data: { "search_dateTAKOEE": date },
+	    						success: function(response) {
+	    							$("body").html(response);
+								$('html,body').scrollTop(0);
+							}
+
+					});
+				});
+
+
 			}
 
 			function chartSearch_larm() {
@@ -513,8 +540,8 @@
 							  fill: false,
 							  hidden: true,
 							  lineTension: 0.4,
-							  backgroundColor: "#6496C8",
-							  borderColor: "#6496C8",
+							  backgroundColor: "#B9CFE6",
+							  borderColor: "#B9CFE6",
 							  // borderCapStyle: 'butt'
 						  },
 						  {
@@ -523,8 +550,9 @@
 							  data: antal.reverse(),
 							  fill: false,
 							  lineTension: 0.4,
-							  backgroundColor: "#B9CFE6",
-							  borderColor: "#B9CFE6",
+							  backgroundColor: "#6496C8",
+							  borderColor: "#6496C8",
+
 							  // borderCapStyle: 'butt'
 					   }
 				   ]
@@ -618,6 +646,73 @@
 
 			}
 
+			function chartTAKOEEsearch() {
+				var label = [];
+				for ( var i = 0; i < 24; i++ ) {
+					label.push(`kl${i}`);
+				}
+
+				prod = [];
+				antal = [];
+				stopptid = [];
+
+				for ( var i = 0; i < 24; i++ ) {
+					prod.push(prodTable.rows[1].cells[i].innerHTML);
+					antal.push(antalTable.rows[1].cells[i].innerHTML);
+					stopptid.push(stopptidTable.rows[1].cells[i].innerHTML);
+				}
+				// console.log(stopptid)
+				var ctx = document.getElementById("prodChart").getContext("2d");
+
+				var myChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+					    labels: label,
+					    datasets: [{
+						     label: "Antal",
+						     type: "line",
+						     data: antal,
+							backgroundColor: '#6496C8',
+							borderColor: '#6496C8',
+						    },
+						    {
+							label: "Produktion",
+    							type: "line",
+    							data: prod,
+							backgroundColor: '#B9CFE6',
+							borderColor: '#B9CFE6',
+							},
+						    {
+						     label: "Stopptid",
+							type: "bar",
+							data: stopptid,
+						     backgroundColor: '#0E86D4',
+						     borderColor: '#0E86D4',
+						    }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						lineTension: 0.4,
+						scales: {
+							y: {
+								// beginAtZero: true
+							}
+						}
+					}
+				});
+					    // {
+						//     label: "Produktion / aktiva dagar",
+						//     data: kl,
+						//     fill: false,
+						//     backgroundColor: 'green',
+						//     borderColor: 'green',
+						//     borderCapStyle: 'butt'
+					    // }
+
+
+
+			}
 
 		</script>
 
@@ -724,10 +819,9 @@
 					WHERE DATE(message_start) $interval $exclude_varning
 					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
 					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
-					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC;";
+					ORDER BY count(message_text) DESC;";
 
 				$result = get_data($sql);
-
 
 				if ($result->num_rows > 0) {
 					echo "<div id='stats' align='center'>
@@ -965,6 +1059,187 @@
 						</script><br><br>";
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
+				}
+			}
+
+			function TAKOEE_search($date) {
+
+				$sql_larm = "SELECT
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					COUNT(message_text) AS Antal,
+					message_text AS Larm
+					FROM alarm_tid WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					ORDER BY count(message_text) DESC";
+
+				$sql_antal = "SELECT (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					COUNT(message_text) AS Antal,
+					message_text AS Larm,
+					hour(message_start) as Hour
+					FROM alarm_tid
+					WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+					GROUP BY hour(message_start)";
+
+				$sql_stopptid = "SELECT message_text as Larm, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, date(message_start) As Datum, message_start, message_end, hour(message_end) As Hour
+						FROM `alarm_tid`
+						WHERE date(message_start) = '".$date."' and message_text NOT LIKE '%Varning%'
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+						group by message_end ORDER BY `alarm_tid`.`message_start` ASC";
+
+				$sql_prod = "SELECT * FROM produktion WHERE date(date_start) = '".$date."' ORDER BY `produktion`.`datum` DESC";
+				// echo $sql_stopptid;
+				$data_larm = get_data($sql_larm);
+				$data_antal = get_data($sql_antal);
+				$data_stopptid = get_data($sql_stopptid);
+				$data_prod = get_data($sql_prod);
+
+				$larm = $data_larm->fetch_all(MYSQLI_ASSOC);
+				$antal = $data_antal->fetch_all(MYSQLI_ASSOC);
+				$stopptid = $data_stopptid->fetch_all(MYSQLI_ASSOC);
+				$prod = $data_prod->fetch_all(MYSQLI_ASSOC);
+
+				if (count($prod) > 0) {
+					$headers = array();
+					$headers_antal = array();
+						for ($x = 0; $x <= 23; $x++) {
+							array_push($headers, $x);
+							array_push($headers_antal, $x);
+						}
+					array_push($headers, 'kassV', 'kassH', 'date_start', 'date_end');
+
+					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
+					echo "<div style='display: none'><table style='width:100%;' id='prodTable'>";
+					create_table($headers);
+
+					foreach ($prod as $row) {
+						$echo = "<tr>";
+						foreach ($headers as $key) {
+							if ($row[$key] != "") {
+								$echo .= "<td>" . $row[$key] . "</td>";
+							} else {
+								$echo .= "<td>" . "0" . "</td>";
+							}
+
+						}
+						$echo .= "</tr>";
+						$date_start = new DateTime($row['date_start']);
+						$date_end = new DateTime($row['date_end']);
+						$diff = strtotime($row["date_end"]) - strtotime($row["date_start"]);
+						echo $echo;
+					}
+
+					echo "</tr>";
+					echo "</table></div>";
+					echo '<script type="text/javascript">chartTAKOEEsearch();</script>';
+				}
+
+				if (count($antal) > 0) {
+					echo "<div style='display: none'><table style='width:100%;' id='antalTable'>";
+					create_table($headers_antal);
+
+					$echo = "<tr>";
+					$found = false;
+					for ($i = 0; $i < 24; $i++) {
+						foreach($antal as $row) {
+							if ($row['Hour'] == $i) {
+								$echo .= "<td>" . $row['Antal'] . "</td>";
+								$found = true;
+								break;
+							}
+						}
+						if (!$found) {
+							$echo .= "<td>" . 0 . "</td>";
+						}
+						$found = false;
+					}
+					$echo .= "</tr>";
+					echo $echo;
+					echo "</table></div>";
+				}
+
+				if (count($stopptid) > 0) {
+
+					$tid = array();
+					$sum_diff = 0;
+					$total_tid = 0;
+
+					$d = $stopptid[0]['Hour'];
+					foreach ($stopptid as $row) {
+						if ($d != $row['Hour']) {
+							$tid[$d] = $sum_diff;
+							$sum_diff = 0;
+						}
+
+						$d = $row['Hour'];
+						$start = strtotime($row['message_start']);
+						$end = strtotime($row['message_end']);
+
+						$sum_diff += abs($start - $end) / 60;
+
+						if(end($stopptid) !== $row) {
+							$tid[$d] = $sum_diff;
+						}
+					}
+
+					echo "<div style='display: none'><table style='width:100%;' id='stopptidTable'>";
+					create_table($headers_antal);
+
+					$echo = "<tr>";
+					$found = false;
+					for ($i = 0; $i < 24; $i++) {
+						foreach($tid as $key => $value) {
+							if ($key == $i) {
+
+								$echo .= "<td>" . bcdiv($value, 1, 1) . "</td>";
+								$total_tid += $value;
+								$found = true;
+								break;
+							}
+						}
+						if (!$found) {
+							$echo .= "<td>" . 0 . "</td>";
+						}
+						$found = false;
+					}
+					$echo .= "</tr>";
+					echo $echo;
+					echo "</table>";
+
+					echo "<table style='width:100%;' id='larmPerHourTable'>";
+					$headers = array("Larm", "Tid", "Hour");
+					create_table($headers);
+					foreach ($stopptid as $row) {
+						echo "<tr><td>" . $row["Larm"] . "</td><td>" . $row["Tid"] . "</td><td>" . $row["Hour"] . "</td></tr>";
+					}
+					echo "</table></div>";
+
+				}
+
+				if (count($larm) > 0) {
+					echo "<div id='stats' align='center'>
+							<p class='inline' id='antal'></p>
+							<p class='inline' id='tid'></p>
+						</div>";
+					$headers = array("Minuter", "Antal", "Larm");
+					echo "<table style='width:80%;' id='myTable'>";
+					create_table($headers);
+
+					$sum_antal = 0;
+					$sum_tid = 0;
+
+					foreach ($larm as $row) {
+						echo "<tr><td>" . bcdiv(($row["Tid"]), 1, 1) . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+						$sum_antal += $row["Antal"];
+						$sum_tid += $row["Tid"];
+					}
+					echo "</tr>";
+					echo "</table>";
+					echo "<script type='text/javascript'>
+							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($total_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
+							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
+						</script><br><br>";
 				}
 			}
 
@@ -1307,7 +1582,7 @@
 					echo "<br>";
 
 
-					$tid = [];
+					$tid = array();
 					$sum_diff = 0;
 
 					$d = $stopptid[0]['Datum'];
@@ -1340,7 +1615,7 @@
 							$kvalite = ($produktion - $kass) / $produktion;
 							$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
 
-							echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
+							echo "<tr><td class='search_date'>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
 								$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
 								 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
 						}
@@ -1388,6 +1663,15 @@
 				$to = date('Y-m-d', strtotime($_POST['dateTo']));
 				echo "<p align='center'>Från: $from  Till:  $to </p>";
 				search_date($from, $to);
+				echo "</div>";
+
+			} else if (isset($_POST['search_dateTAKOEE'])) {
+				echo "<div class='wrapperRecent'>";
+				$date = $_POST['search_dateTAKOEE'];
+				// $from = $_POST['takoeeDateSearch_from'];
+				// $from = $_POST['takoeeDateSearch_to'];
+				echo "<p align='center'>Datum: ".$date."</p>";
+				TAKOEE_search($date);
 				echo "</div>";
 
 			} else if (isset($_POST['utveckling'])) {
