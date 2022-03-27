@@ -11,7 +11,7 @@
 
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.js"></script>
-	<script src="jquery.min.js"></script>
+	<script src="alarm_old/jquery.min.js"></script>
 
 	<body>
 		<nav class="navbar" align="center">
@@ -112,7 +112,7 @@
 				        switching = true;
 				      }
 				    }
-				  }
+			    }
 			}
 
 			function dashboardTAKOEE() {
@@ -481,7 +481,7 @@
 				function onRowClick(tableId, callback) {
 					var table = document.getElementById(tableId),
 					     rows = table.getElementsByTagName("tr"), i;
-					for (i = 0; i < rows.length; i++) {
+					for (i = 1; i < rows.length; i++) {
 					     table.rows[i].onclick = function (row) {
 					          return function () {
 					              callback(row);
@@ -615,6 +615,15 @@
 							backgroundColor: '#6496C8',
 							borderColor: '#6496C8',
 						    },
+						    // {
+							// label: "Produktion / aktiva dagar",
+							// data: kl,
+							// fill: false,
+							// type: "line",
+							// backgroundColor: '#0E86D4',
+							// borderColor: '#0E86D4',
+							// borderCapStyle: 'butt'
+							// },
 						    {
 							label: "Produktion vardagar / aktiva vardagar",
 							data: weekdays,
@@ -633,14 +642,7 @@
 						}
 					}
 				});
-					    // {
-						//     label: "Produktion / aktiva dagar",
-						//     data: kl,
-						//     fill: false,
-						//     backgroundColor: 'green',
-						//     borderColor: 'green',
-						//     borderCapStyle: 'butt'
-					    // }
+
 
 
 
@@ -648,6 +650,7 @@
 
 			function chartTAKOEEsearch() {
 				var label = [];
+				var index;
 				for ( var i = 0; i < 24; i++ ) {
 					label.push(`kl${i}`);
 				}
@@ -655,13 +658,14 @@
 				prod = [];
 				antal = [];
 				stopptid = [];
+				larmPerHour = [];
 
 				for ( var i = 0; i < 24; i++ ) {
 					prod.push(prodTable.rows[1].cells[i].innerHTML);
 					antal.push(antalTable.rows[1].cells[i].innerHTML);
 					stopptid.push(stopptidTable.rows[1].cells[i].innerHTML);
 				}
-				// console.log(stopptid)
+
 				var ctx = document.getElementById("prodChart").getContext("2d");
 
 				var myChart = new Chart(ctx, {
@@ -669,28 +673,57 @@
 					data: {
 					    labels: label,
 					    datasets: [{
-						     label: "Antal",
-						     type: "line",
-						     data: antal,
-							backgroundColor: '#6496C8',
-							borderColor: '#6496C8',
+						    label: "Stopptid",
+						    type: "line",
+						    data: stopptid,
+						    backgroundColor: '#0E86D4',
+						    borderColor: '#0E86D4',
 						    },
 						    {
-							label: "Produktion",
-    							type: "line",
-    							data: prod,
-							backgroundColor: '#B9CFE6',
-							borderColor: '#B9CFE6',
+							label: "Antal",
+    						     type: "line",
+    						     data: antal,
+    							backgroundColor: '#6496C8',
+    							borderColor: '#6496C8',
 							},
 						    {
-						     label: "Stopptid",
+							label: "Produktion",
 							type: "bar",
-							data: stopptid,
-						     backgroundColor: '#0E86D4',
-						     borderColor: '#0E86D4',
+							data: prod,
+							backgroundColor: '#B9CFE6',
+							borderColor: '#B9CFE6',
 						    }]
 					},
 					options: {
+						plugins: {
+							tooltip: {
+								callbacks: {
+									afterBody: function(context) {
+										if (index == context[0].dataIndex) {
+												return larmPerHour;
+										} else {
+											index = context[0].dataIndex
+											larmPerHour = ["Tid, Larm"];
+											for (var i = 1; i < larmPerHourTable.rows.length; i++) {
+												if (larmPerHourTable.rows[i].cells[2].innerHTML == context[0].dataIndex) {
+													larmPerHour.push([
+														larmPerHourTable.rows[i].cells[0].innerHTML,
+														larmPerHourTable.rows[i].cells[1].innerHTML,
+													]);
+												}
+											}
+											if (larmPerHour.length > 0) {
+												larmPerHour.sort(function(a, b){return b[0] - a[0]});
+												console.log(larmPerHour)
+												console.log(context[0].dataIndex)
+												// return `Tid: ${larmPerHour[0][0]} | Larm: ${larmPerHour[0][1]}Tid: ${larmPerHour[1][0]} | Larm: ${larmPerHour[1][1]}`;
+												return larmPerHour;
+											}
+										}
+									}
+								}
+							}
+						},
 						responsive: true,
 						maintainAspectRatio: false,
 						lineTension: 0.4,
@@ -1063,6 +1096,10 @@
 			}
 
 			function TAKOEE_search($date) {
+				// echo "<div class='larmThisHour'>
+				// 		<p id='tid'></p>
+				// 		<p id='larm'></p>
+				// </div>";
 
 				$sql_larm = "SELECT
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
@@ -1136,9 +1173,9 @@
 				}
 
 				if (count($antal) > 0) {
-					echo "<div style='display: none'><table style='width:100%;' id='antalTable'>";
+					echo "<div style='display: '><table style='width:100%;' id='antalTable'>";
 					create_table($headers_antal);
-
+					// print_r($antal);
 					$echo = "<tr>";
 					$found = false;
 					for ($i = 0; $i < 24; $i++) {
@@ -1176,6 +1213,12 @@
 						$start = strtotime($row['message_start']);
 						$end = strtotime($row['message_end']);
 
+						$hour_start = date("H", strtotime($row['message_start']));
+						$hour_end = date("H", strtotime($row['message_end']));
+						// echo date("H", strtotime($row['message_start'])) . "-";
+						//
+						// if ($hour_start)
+
 						$sum_diff += abs($start - $end) / 60;
 
 						if(end($stopptid) !== $row) {
@@ -1208,10 +1251,10 @@
 					echo "</table>";
 
 					echo "<table style='width:100%;' id='larmPerHourTable'>";
-					$headers = array("Larm", "Tid", "Hour");
+					$headers = array("Tid", "Larm", "Hour");
 					create_table($headers);
 					foreach ($stopptid as $row) {
-						echo "<tr><td>" . $row["Larm"] . "</td><td>" . $row["Tid"] . "</td><td>" . $row["Hour"] . "</td></tr>";
+						echo "<tr><td>" . bcdiv($row["Tid"], 1, 1) . "</td><td>" . $row["Larm"] . "</td><td>" . $row["Hour"] . "</td></tr>";
 					}
 					echo "</table></div>";
 
@@ -1237,8 +1280,8 @@
 					echo "</tr>";
 					echo "</table>";
 					echo "<script type='text/javascript'>
-							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($total_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
-							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
+							document.getElementById('antal').innerHTML = 'Stopptid: ".bcdiv(($total_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
+							document.getElementById('tid').innerHTML = 'Antal: ".$sum_antal."';
 						</script><br><br>";
 				}
 			}
