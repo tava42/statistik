@@ -1,0 +1,1 @@
+CREATE TRIGGER `add_artikelnummer` BEFORE INSERT ON `alarm_tid` FOR EACH ROW SET NEW.artikelnummer = (select produktion.artikelnummer from produktion ORDER BY produktion.date_start DESC LIMIT 1)
