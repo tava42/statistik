@@ -23,6 +23,7 @@
 				<input type="submit" name="TAKOEE" class="button" value="TAKOEE">
 				<input type='submit' name='produktion' class='button' value='Produktion'>
 				<input type="submit" name="utveckling" class="button" value="Utveckling">
+				<input type="submit" name="pallet_fel" class="button" value="Pallet fel">
 				<input type="submit" name="overview" class="button" value="Översikt">
 				<input type="submit" name="avg_time" class="button" value="Genomsnittlig stopptid">
 				<input type="hidden" name="inc" value="0" />
@@ -184,11 +185,20 @@
 				if (type == "dash") {
 					decCanvas = "decDashUtv";
 					incCanvas = "incDashUtv";
-					var rows = 5;
+					if (myTable.rows.length >= 5) {
+						var rows = 5;
+					} else {
+						var rows = myTable.rows.length - 1;
+					}
+
 				} else if (type == "utveckling") {
 					decCanvas = "decUtveckling";
 					incCanvas = "incUtveckling";
-					var rows = 20;
+					if (myTable.rows.length >= 20) {
+						var rows = 20;
+					} else {
+						var rows = myTable.rows.length - 1;
+					}
 				}
 				var maxTid = [];
 				var minTid = [];
@@ -201,6 +211,8 @@
 					if (myTable.rows[i].cells[5].innerHTML > 0) {
 						incAntal.push(myTable.rows[i].cells[5].innerHTML);
 						incLarm.push(myTable.rows[i].cells[6].innerHTML);
+					} else {
+						incLarm.push("-");
 					}
 
 				}
@@ -380,10 +392,10 @@
 				    produktionstid.push(myTable.rows[i].cells[2].innerHTML * 60);
 				    stopptid.push(myTable.rows[i].cells[3].innerHTML * 60);
 				    kass.push(myTable.rows[i].cells[4].innerHTML);
-				    t.push(myTable.rows[i].cells[5].innerHTML.replace('%', ''));
-				    a.push(myTable.rows[i].cells[6].innerHTML.replace('%', ''));
-				    k.push(myTable.rows[i].cells[7].innerHTML.replace('%', ''));
-				    oee.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
+				    t.push(myTable.rows[i].cells[7].innerHTML.replace('%', ''));
+				    a.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
+				    k.push(myTable.rows[i].cells[9].innerHTML.replace('%', ''));
+				    oee.push(myTable.rows[i].cells[10].innerHTML.replace('%', ''));
 				}
 
 				var ctx = document.getElementById("prodChart").getContext("2d");
@@ -578,16 +590,16 @@
 					for ( var x = 1; x < myTable.rows.length; x++ ) {
 
 						var row = parseInt(myTable.rows[x].cells[i].innerHTML);
-						var weekday = new Date(myTable.rows[x].cells[26].innerHTML).getDay();
+						var weekday = new Date(myTable.rows[x].cells[27].innerHTML).getDay();
 						if (i == 0) {
-							if (weekday > 0 && weekday < 5) {
+							if (weekday > 0 && weekday < 4) {
 								countWeekdays += 1;
 							}
 						}
 						if (row > 0) {
 							sum += row;
 							days += 1;
-							if (weekday > 0 && weekday < 6) {
+							if (weekday > 0 && weekday < 5) {
 								sumWeekdays += row;
 							}
 						}
@@ -642,10 +654,53 @@
 						}
 					}
 				});
+			}
 
+			function chartPallet() {
+				var label = [];
+				for ( var i = 1; i <= 15; i++ ) {
+					label.push(`pallet_${i}`);
+				}
+				datum = [];
+				artikelnummer = [];
+				pallet = [];
+				sum = 0;
 
+				for ( var i = 2; i <= 16; i++ ) {
+					for ( var x = 1; x < myTable.rows.length; x++ ) {
+						var row = parseInt(myTable.rows[x].cells[i].innerHTML);
+						if (row > 0) {
+							sum += row;
+						}
+					}
+					pallet.push(sum);
+					sum = 0;
+				}
 
-
+				var ctx = document.getElementById("prodChart").getContext("2d");
+				console.log(pallet);
+				var myChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+					    labels: label,
+					    datasets: [{
+							label: "Pallet fel",
+							type: "bar",
+							data: pallet,
+							backgroundColor: '#6496C8',
+							borderColor: '#6496C8',
+						    }]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						lineTension: 0.4,
+						scales: {
+							y: {
+							}
+						}
+					}
+				});
 			}
 
 			function chartTAKOEEsearch() {
@@ -673,25 +728,26 @@
 					data: {
 					    labels: label,
 					    datasets: [{
-						    label: "Stopptid",
-						    type: "line",
-						    data: stopptid,
-						    backgroundColor: '#0E86D4',
-						    borderColor: '#0E86D4',
+						    label: "Produktion",
+						    type: "bar",
+						    data: prod,
+						    backgroundColor: '#B9CFE6',
+						    borderColor: '#B9CFE6',
+
 						    },
 						    {
 							label: "Antal",
-    						     type: "line",
+    						     type: "bar",
     						     data: antal,
     							backgroundColor: '#6496C8',
     							borderColor: '#6496C8',
 							},
 						    {
-							label: "Produktion",
+							label: "Stopptid",
 							type: "bar",
-							data: prod,
-							backgroundColor: '#B9CFE6',
-							borderColor: '#B9CFE6',
+							data: stopptid,
+							backgroundColor: '#0E86D4',
+							borderColor: '#0E86D4',
 						    }]
 					},
 					options: {
@@ -850,8 +906,8 @@
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE DATE(message_start) $interval $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
-					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					GROUP BY message_text
 					ORDER BY count(message_text) DESC;";
 
 				$result = get_data($sql);
@@ -930,7 +986,7 @@
 					message_start As Datum
 					FROM alarm_tid
 					WHERE DATE(message_start) BETWEEN $first
-					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					group by message_text
 					union
 					SELECT
@@ -940,7 +996,7 @@
 					message_start As Datum
 					FROM alarm_tid
 					WHERE DATE(message_start) BETWEEN $second
-					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					group by message_text
 					ORDER BY `Larm`  ASC;";
 
@@ -1018,6 +1074,51 @@
 				}
 			}
 
+			function pallet_fel() {
+
+
+				$sql = "SELECT * FROM pallet_fel WHERE datum = current_date";
+
+				$result = get_data($sql);
+				$data = $result->fetch_all(MYSQLI_ASSOC);
+
+
+				if (count($data) > 0) {
+
+					$headers = array();
+					array_push($headers, 'datum', 'artikelnummer');
+						for ($x = 1; $x <= 15; $x++) {
+							array_push($headers, "pallet_{$x}");
+						}
+					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
+					echo "<table width='100%' id='myTable'>";
+					create_table($headers);
+
+					foreach ($data as $row ) {
+						$echo = "<tr>";
+						foreach ($headers as $key) {
+							if ($row[$key] != "") {
+								$echo .= "<td>" . $row[$key] . "</td>";
+							} else {
+								$echo .= "<td>" . "-" . "</td>";
+							}
+
+						}
+						$echo .= "</tr>";
+						echo $echo;
+					}
+
+					echo "</tr>";
+					echo "</table><br><br>";
+					echo "</div>";
+					echo '<script type="text/javascript">chartPallet();</script>';
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
+				}
+
+
+			}
+
 			function average() {
 				if ($_POST['inc'] == '0') {
 					$exclude_varning = "WHERE message_text NOT LIKE '%Varning%' AND ";
@@ -1029,8 +1130,8 @@
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) DIV COUNT(message_text) AS Avg,
 					message_text AS Larm
 					FROM alarm_tid $exclude_varning
-					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
-					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					GROUP BY message_text
 					ORDER BY Avg DESC;";
 
 				$result = get_data($sql);
@@ -1061,8 +1162,8 @@
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
-					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					GROUP BY message_text
 					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC";
 
 				$result = get_data($sql);
@@ -1106,8 +1207,8 @@
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
-					GROUP BY message_text, message_text HAVING COUNT(message_text) > 0
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					GROUP BY message_text
 					ORDER BY count(message_text) DESC";
 
 				$sql_antal = "SELECT (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
@@ -1116,17 +1217,17 @@
 					hour(message_start) as Hour
 					FROM alarm_tid
 					WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					GROUP BY hour(message_start)";
 
 				$sql_stopptid = "SELECT message_text as Larm, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, date(message_start) As Datum, message_start, message_end, hour(message_end) As Hour
 						FROM `alarm_tid`
 						WHERE date(message_start) = '".$date."' and message_text NOT LIKE '%Varning%'
-						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 						group by message_end ORDER BY `alarm_tid`.`message_start` ASC";
 
 				$sql_prod = "SELECT * FROM produktion WHERE date(date_start) = '".$date."' ORDER BY `produktion`.`datum` DESC";
-				// echo $sql_stopptid;
+
 				$data_larm = get_data($sql_larm);
 				$data_antal = get_data($sql_antal);
 				$data_stopptid = get_data($sql_stopptid);
@@ -1173,7 +1274,7 @@
 				}
 
 				if (count($antal) > 0) {
-					echo "<div style='display: '><table style='width:100%;' id='antalTable'>";
+					echo "<div style='display: none'><table style='width:100%;' id='antalTable'>";
 					create_table($headers_antal);
 					// print_r($antal);
 					$echo = "<tr>";
@@ -1204,26 +1305,48 @@
 
 					$d = $stopptid[0]['Hour'];
 					foreach ($stopptid as $row) {
-						if ($d != $row['Hour']) {
-							$tid[$d] = $sum_diff;
-							$sum_diff = 0;
-						}
-
 						$d = $row['Hour'];
 						$start = strtotime($row['message_start']);
 						$end = strtotime($row['message_end']);
 
 						$hour_start = date("H", strtotime($row['message_start']));
 						$hour_end = date("H", strtotime($row['message_end']));
-						// echo date("H", strtotime($row['message_start'])) . "-";
+						$date = date('Y-m-d', strtotime($row['message_start']));
+
+						// if larm is over 2 different hours
+						// if ($hour_start == $hour_end) {
+							// $sum_diff += abs($start - $end) / 60;
+							if (array_key_exists($d, $tid)) {
+								$tid[$d] += (abs($start - $end) / 60);
+							} else {
+								$tid[$d] = abs($start - $end) / 60;
+							}
+
+						// } elseif ($hour_start !== $hour_end) {
+						// 	$first = strtotime($date . ' ' . $hour_start . ':59:59');
+						// 	$second = strtotime($date . ' ' . $hour_end . ':00:00');
 						//
-						// if ($hour_start)
-
-						$sum_diff += abs($start - $end) / 60;
-
-						if(end($stopptid) !== $row) {
-							$tid[$d] = $sum_diff;
-						}
+						// 	echo date('Y-m-d H:i:s', $start) . $row['Larm'] . "<br>";
+						// 	echo date('Y-m-d H:i:s', $first) . $row['Larm'] . "<br>";
+						// 	echo date('Y-m-d H:i:s', $second) . $row['Larm'] . "<br>";
+						// 	echo date('Y-m-d H:i:s', $end) . $row['Larm'] . "<br>";
+						//
+						// 	$first_diff = abs($start - $first);
+						// 	$second_diff = abs($second - $end);
+						//
+						// 	// $sum_diff += $first_diff / 60;
+						// 	if (array_key_exists($d, $tid)) {
+						// 		$tid[$d] += $first_diff / 60;
+						// 	} else {
+						// 		$tid[$d] = $first_diff / 60;
+						// 	}
+						//
+						// 	if (array_key_exists($d + 1, $tid)) {
+						// 		$tid[$d + 1] += $second_diff / 60;
+						// 	} else {
+						// 		$tid[$d + 1] = $second_diff / 60;
+						// 	}
+						// }
 					}
 
 					echo "<div style='display: none'><table style='width:100%;' id='stopptidTable'>";
@@ -1294,7 +1417,7 @@
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE message_text = '".$search_larm."'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					GROUP BY DATE(message_start) DESC";
 
 				$sql_weeks = "SELECT
@@ -1306,7 +1429,7 @@
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE message_text = '".$search_larm."'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					GROUP BY YEARWEEK(message_start, 1) DESC";
 
 				$sql_range = "SELECT yearweek(message_start, 1) as yearweek, YEAR(message_start) As Year, WEEKOFYEAR(message_start) As Week
@@ -1361,7 +1484,7 @@
 					message_text AS Larm
 					FROM alarm_tid
 					WHERE message_text = '".$search_larm."'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 60
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					GROUP BY DATE(message_start) DESC";
 
 				$sql_range = "SELECT date(message_start) as Datum
@@ -1381,8 +1504,6 @@
     				// 	array_push($range, $dates->format('Y-m-d'));
 				// }
 				// $range = array_reverse($range);
-
-
 
 				// echo $sql_days;
 
@@ -1479,7 +1600,7 @@
 					COUNT(message_text) As Antal,
 					message_text As Larm
 		    			FROM alarm_tid WHERE (message_text LIKE '%Stn ".$x."%' OR message_text LIKE '%Station ".$x."%')
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
 					$exclude_varning UNION ";
 				}
 
@@ -1488,7 +1609,7 @@
 				message_text As Larm
 				FROM alarm_tid
 				WHERE message_text NOT LIKE '%Stn%' AND message_text NOT LIKE '%Station %'
-				AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 60
+				AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
 				$exclude_varning";
 
 				$result = get_data($sql);
@@ -1515,7 +1636,7 @@
 			}
 
 			function produktion() {
-				$sql = "SELECT * FROM produktion ORDER BY `produktion`.`datum` DESC";
+				$sql = "SELECT * FROM produktion ORDER BY `produktion`.`date_start`  DESC";
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
@@ -1524,12 +1645,12 @@
 						for ($x = 0; $x <= 23; $x++) {
 							array_push($headers, $x);
 						}
-					array_push($headers, 'kassV', 'kassH', 'date_start', 'date_end');
+					array_push($headers, 'kassV', 'kassH', 'artikelnummer', 'date_start', 'date_end');
 
 					// echo	"<div class='wrapperProdchart'>
 					// 		<canvas id='line-chart'></canvas>
 					// 	</div>";
-					echo "<div class='wrapper'>";
+					echo "<div class='wrapperProd'>";
 					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
 					echo "<table style='width:100%;' id='myTable'>";
 					create_table($headers);
@@ -1565,22 +1686,23 @@
 			}
 
 			function TAKOEE($dashboard) {
-				$max_prod = 250 / 60;
+				$max_prod = 250;
 
-				$sum_prod = "(select(";
+				$sum_prod = "(select sum((";
 				for ($x=0; $x <= 22; $x++) {
 					$sum_prod .= "COALESCE(produktion." . $x . ", 0) + ";
 				}
-				$sum_prod .= "COALESCE(produktion.23, 0)))";
+				$sum_prod .= "COALESCE(produktion.23, 0))))";
 
-				$sql = "select datum, ".$sum_prod." As produktion, (select(kassV + kassH)) As kass, date_start, date_end, idle
+				$sql = "select datum, ".$sum_prod." As produktion, (SELECT SUM(TIMESTAMPDIFF(SECOND, date_start, date_end)) / 3600) as prod_tid, (select sum((kassV + kassH))) As kass, date_start, date_end, idle
 					FROM produktion where date_start IS NOT NULL
-					ORDER BY produktion.datum DESC";
+					GROUP BY datum
+					ORDER BY produktion.date_start DESC";
 
 				$sql_stopptid = "SELECT date(message_start) As Datum, message_start, message_end, count(message_end)
 						FROM `alarm_tid`
 						WHERE date(message_start) > '2022-02-05' and message_text NOT LIKE '%Varning%'
-						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 						group by message_end ORDER BY `alarm_tid`.`message_start` DESC";
 
 				// $sql = "select produktion.datum,
@@ -1593,15 +1715,16 @@
 				// 		from produktion
 				// 		left join alarm_tid
 				// 		on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
-				// 		AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 100
+				// 		AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
 				// 		WHERE alarm_tid.message_start > '2022-02-05'
 				// 		GROUP by date(alarm_tid.message_start) DESC;";
 
 				// $sql2 = "SELECT date(message_id) as datum, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, count(message_id) as count
 				// 	FROM `alarm_tid`
-				// 	WHERE date(message_start) > '2022-02-05' AND message_text NOT LIKE '%Varning%' AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 100
+				// 	WHERE date(message_start) > '2022-02-05' AND message_text NOT LIKE '%Varning%' AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 				// 	group by message_id having count(message_id) > 1 ORDER BY `datum` DESC";
-
+				echo $sql;
+				// echo $sql_stopptid;
 				$result = get_data($sql);
 				$stopptid = get_data($sql_stopptid);
 
@@ -1618,7 +1741,9 @@
 							</div>
 						</div>";
 
-					$headers = array('Datum', 'Produktion', 'Produktionstid', 'Stopptid', 'Kass', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
+					$headers = array('Datum', 'Produktion',
+					// 'Max prod', 'Avg prod',
+					'Produktionstid', 'Stopptid', 'Kass', 'avg_prod/h', 'est. prod', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
 					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
 					echo "<table style='width:100%;' id='myTable'>";
 					create_table($headers);
@@ -1639,18 +1764,50 @@
 						$start = strtotime($row['message_start']);
 						$end = strtotime($row['message_end']);
 
-						$sum_diff += abs($start - $end) / 60;
+						$sum_diff += abs($start - $end) / 3600;
 
 						if(end($stopptid) !== $row) {
 							$tid[$d] = $sum_diff;
 						}
 					}
-
+					// print_r($tid);
+					// $res = array();
+					// foreach($data as $vals){
+					//     if(array_key_exists($vals['datum'],$res)){
+					//         $res[$vals['datum']]['idle'] += ((strtotime($vals["date_end"]) - strtotime($vals["date_start"])));
+					//
+					//     }
+					//     else{
+					//         $res[$vals['datum']]['idle'] = ((strtotime($vals["date_end"]) - strtotime($vals["date_start"])));
+					//     }
+			    		// }
+					// print_r($res);
 					foreach ($data as $row ) {
 						$produktion = $row['produktion'];
-						$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
-						$stopptid = $tid[$row['datum']];
+						//
+						// if(array_key_exists($row['datum'],$data)) {
+						// 	$produktionstid += ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60);
+						// } else {
+						// 	$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60);
+						// }
+
+						// print_r($produktionstid);
+						// $produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
+						$produktionstid = $row['prod_tid'] - ($row["idle"] / 60);
 						$kass = $row['kass'];
+						$avg_prod = $produktion / $produktionstid;
+						$expected_prod = ($produktionstid) * $max_prod;
+
+						if (isset($tid[$row['datum']])) {
+							$stopptid = $tid[$row['datum']];
+						} else {
+							$stopptid = 0;
+						}
+
+
+						// echo bcdiv($expected_prod, 1, 0) . "<br>";
+						// echo bcdiv($avg_prod, 1, 0) . "<br>";
+						// <td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td>
 
 						if ($produktionstid != 0 && $produktion != 0) {
 							$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
@@ -1658,8 +1815,10 @@
 							$kvalite = ($produktion - $kass) / $produktion;
 							$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
 
-							echo "<tr><td class='search_date'>" . $row['datum'] . "</td><td>" . $produktion . "</td><td>" . bcdiv(($produktionstid / 60),1, 2)  . "</td><td>" . bcdiv(($stopptid / 60),1, 2) . "</td><td>" .
-								$kass . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
+							echo "<tr><td class='search_date'>" . $row['datum'] . "</td><td>" . $produktion . "</td>
+
+							<td>" . bcdiv(($produktionstid), 1, 2)  . "</td><td>" . bcdiv(($stopptid), 1, 2) . "</td><td>" .
+								$kass . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td><td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
 								 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
 						}
 					}
@@ -1729,6 +1888,11 @@
 				$dashboard = false;
 				echo "<div class='wrapper'>";
 				utveckling($search_date, $dashboard);
+				echo "</div>";
+
+			} else if (isset($_POST['pallet_fel'])) {
+				echo "<div class='wrapperProd'>";
+				pallet_fel();
 				echo "</div>";
 
 			} else if (isset($_POST['search_larm'])) {
