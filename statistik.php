@@ -666,7 +666,7 @@
 				pallet = [];
 				sum = 0;
 
-				for ( var i = 2; i <= 16; i++ ) {
+				for ( var i = 0; i <= 14; i++ ) {
 					for ( var x = 1; x < myTable.rows.length; x++ ) {
 						var row = parseInt(myTable.rows[x].cells[i].innerHTML);
 						if (row > 0) {
@@ -1075,9 +1075,7 @@
 			}
 
 			function pallet_fel() {
-
-
-				$sql = "SELECT * FROM pallet_fel WHERE datum = current_date";
+				$sql = "SELECT * FROM pallet_fel"; // WHERE datum = current_date";
 
 				$result = get_data($sql);
 				$data = $result->fetch_all(MYSQLI_ASSOC);
@@ -1086,10 +1084,10 @@
 				if (count($data) > 0) {
 
 					$headers = array();
-					array_push($headers, 'datum', 'artikelnummer');
 						for ($x = 1; $x <= 15; $x++) {
 							array_push($headers, "pallet_{$x}");
 						}
+					array_push($headers, 'artikelnummer', 'datum');
 					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
 					echo "<table width='100%' id='myTable'>";
 					create_table($headers);
@@ -1637,6 +1635,7 @@
 
 			function produktion() {
 				$sql = "SELECT * FROM produktion ORDER BY `produktion`.`date_start`  DESC";
+
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
@@ -1659,18 +1658,20 @@
 						if ($row['date_start'] != null) {
 							$echo = "<tr>";
 							foreach ($headers as $key) {
-
 								if ($row[$key] != "") {
-									$echo .= "<td id='test'>" . $row[$key] . "</td>";
+									if ($key == 'date_start' or $key == 'date_end') {
+										$row[$key] = substr($row[$key], 0, -4);
+									}
+									$echo .= "<td>" . $row[$key] . "</td>";
 								} else {
-									$echo .= "<td id='test'>" . "-" . "</td>";
+									$echo .= "<td>" . "-" . "</td>";
 								}
 
 							}
 							$echo .= "</tr>";
-							$date_start = new DateTime($row['date_start']);
-							$date_end = new DateTime($row['date_end']);
-							$diff = strtotime($row["date_end"]) - strtotime($row["date_start"]);
+							// $date_start = new DateTime($row['date_start']);
+							// $date_end = new DateTime($row['date_end']);
+							// $diff = strtotime($row["date_end"]) - strtotime($row["date_start"]);
 
 							echo $echo;
 						}
@@ -1723,7 +1724,7 @@
 				// 	FROM `alarm_tid`
 				// 	WHERE date(message_start) > '2022-02-05' AND message_text NOT LIKE '%Varning%' AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 				// 	group by message_id having count(message_id) > 1 ORDER BY `datum` DESC";
-				echo $sql;
+				// echo $sql;
 				// echo $sql_stopptid;
 				$result = get_data($sql);
 				$stopptid = get_data($sql_stopptid);

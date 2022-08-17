@@ -1,15 +1,15 @@
 <?php
 
-$a1 = 7; // fel H
-$a2 = 8; // fel V
-$a3 = 8; // kvar
+$a1 = 11; // fel H
+$a2 = 12; // fel V
+$a3 = 6; // kvar
 $a4 = 1; // status I18.2
-$a5 = 1022; // Artikelnummer left st 1 DB30.DBW8
-$a6 = 1021; // Artikelnummer Right st 1 DB30.DBW10
-$a7 = 0; // idle DB10.DBX8.0
+$a5 = 114; // Artikelnummer left st 1 DB30.DBW8
+$a6 = 113; // Artikelnummer Right st 1 DB30.DBW10
+$a7 = 1; // idle DB10.DBX8.0
 $a8 = 10; // pallet_id station 10 DB30.DBW722
-$a9 = 5; // drifttid DB26.DBW14
-$a10 = 2; // drifttid DB26.DBW16
+$a9 = 9; // drifttid DB26.DBW14
+$a10 = 4; // stopptid DB26.DBW16
 
 $status = preg_replace('/[^0-9]/', '', $a4);
 
@@ -18,11 +18,22 @@ if ($status == 1) {
      function insert_data($sql) {
           $conn = new mysqli('localhost', 'root', '', 'steelform');
           if ($conn->connect_error) {
-                    die("Connection failed: " . $conn->connection_error);
+               die("Connection failed: " . $conn->connection_error);
           }
           echo $sql."<br>\n";
           $conn->query($sql);
           $conn->close();
+     }
+
+     function select_data($sql) {
+          $conn = new mysqli('localhost', 'root', '', 'steelform');
+          if ($conn->connect_error) {
+               die("Connection failed: " . $conn->connection_error);
+          }
+          $result = $conn->query($sql);
+          $data = $result->fetch_all(MYSQLI_ASSOC);
+          $conn->close();
+          return $data;
      }
 
      $felH = preg_replace('/[^0-9]/', '', $a1);
@@ -35,24 +46,17 @@ if ($status == 1) {
      $drifttid = preg_replace('/[^0-9]/', '', $a9);
      $stopptid = preg_replace('/[^0-9]/', '', $a10);
 
-     $datetime = date("Y-m-d H:i:s");
+     $now = new DateTime;
+     $datetime = $now->format("Y-m-d H:i:s.u");
      $today = date('Y-m-d');
      $hour = intval(date('H'));
 
-     $sql = "SELECT date_end, artikelnummer, old_drifttid, old_stopptid, old_kassV, old_kassH, old_kvar
+     $sql = "SELECT artikelnummer, old_drifttid, old_stopptid, old_kassV, old_kassH, old_kvar, (UNIX_TIMESTAMP(now(3)) - UNIX_TIMESTAMP(date_end)) As time_counter
           FROM produktion
           WHERE datum = '".$today."'
           ORDER BY date_start DESC LIMIT 1";
 
-     $conn = new mysqli('localhost', 'root', '', 'steelform');
-
-     if ($conn->connect_error) {
-               die("Connection failed: " . $conn->connection_error);
-     }
-
-     $result = $conn->query($sql);
-     $data = $result->fetch_all(MYSQLI_ASSOC);
-     $conn->close();
+     $data = select_data($sql);
 
      foreach ($data as $row) {
           $artikelnummer = $row['artikelnummer'];
@@ -61,14 +65,13 @@ if ($status == 1) {
           $old_kassV = $row['old_kassV'];
           $old_kassH = $row['old_kassH'];
           $old_kvar = $row['old_kvar'];
+          $time_counter = $row['time_counter'];
 
-          //time difference between last script update
-          $time_counter = abs((strtotime($row['date_end']) - strtotime($datetime)));
      }
 
      if (count($data) > 0) {
           // checks if new session should be started. If machine been off for less than 30 min then same session continues.
-          if ($time_counter > 3600 or $model_v != 0 && $model_v != $artikelnummer) {
+          if ($time_counter > 1800 or $model_v != 0 && $model_v != $artikelnummer) {
                $sql = "INSERT INTO `produktion` (`datum`, `date_start`, `date_end`, `artikelnummer`, `old_drifttid`, `old_stopptid`, `old_kassV`, `old_kassH`, `old_kvar`)
                     VALUES ('".$today."', '".$datetime."', '".$datetime."', '".$model_v."', '".$drifttid."', '".$stopptid."', '".$felV."', '".$felH."', '".$kvar."')";
                insert_data($sql);
@@ -145,7 +148,6 @@ if ($status == 1) {
                }
 
                if ($old_kvar != $kvar or $diff_kassV > 0 or $diff_kassH > 0) {
-
                     // If remaning units decrease or increase more than 5 then its because the value was changed manually and should not be counted.
                     $diff_kvar = ($old_kvar - $kvar) * 2;
                     if ($diff_kvar < 0 or $diff_kvar > 5) {
@@ -172,10 +174,18 @@ if ($status == 1) {
 
      } else {
           // New day, start new session.
+          if ($model_v == 0) {
+               $sql = "SELECT artikelnummer FROM produktion ORDER BY date_start DESC LIMIT 1";
+               $data = select_data($sql);
+               foreach ($data as $row) {
+                    $model_v = $row['artikelnummer'];
+               }
+          }
+
           $sql = "INSERT INTO `produktion` (`datum`, `date_start`, `date_end`, `artikelnummer`, `old_drifttid`, `old_stopptid`, `old_kassV`, `old_kassH`, `old_kvar`)
                VALUES ('".$today."', '".$datetime."', '".$datetime."', '".$model_v."', '".$drifttid."', '".$stopptid."', '".$felV."', '".$felH."', '".$kvar."')";
           insert_data($sql);
      }
 }
 
- ?>
+?>
