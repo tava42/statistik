@@ -1,20 +1,19 @@
 <?php
 
-$a1 = 11; // fel H
-$a2 = 12; // fel V
-$a3 = 6; // kvar
-$a4 = 1; // status I18.2
-$a5 = 114; // Artikelnummer left st 1 DB30.DBW8
-$a6 = 113; // Artikelnummer Right st 1 DB30.DBW10
-$a7 = 1; // idle DB10.DBX8.0
-$a8 = 10; // pallet_id station 10 DB30.DBW722
-$a9 = 9; // drifttid DB26.DBW14
-$a10 = 4; // stopptid DB26.DBW16
+$a1 = 28; // fel H
+$a2 = 39; // fel V
+$a3 = 3; // kvar
+$a4 = 156; // Artikelnummer left st 1 DB30.DBW8
+$a5 = 155; // Artikelnummer Right st 1 DB30.DBW10
+$a6 = 1; // idle DB10.DBX8.0
+$a7 = 10; // pallet_id station 10 DB30.DBW722
+$a8 = 23; // drifttid DB26.DBW14
+$a9 = 12; // stopptid DB26.DBW16
+$a10 = 1; // status I18.2
 
-$status = preg_replace('/[^0-9]/', '', $a4);
+$status = preg_replace('/[^0-9]/', '', $a10);
 
 if ($status == 1) {
-
      function insert_data($sql) {
           $conn = new mysqli('localhost', 'root', '', 'steelform');
           if ($conn->connect_error) {
@@ -36,15 +35,16 @@ if ($status == 1) {
           return $data;
      }
 
-     $felH = preg_replace('/[^0-9]/', '', $a1);
-     $felV = preg_replace('/[^0-9]/', '', $a2);
-     $kvar = preg_replace('/[^0-9]/', '', $a3);
-     $model_v = preg_replace('/[^0-9]/', '', $a5);
-     $model_h = preg_replace('/[^0-9]/', '', $a6);
-     $idling = preg_replace('/[^0-9]/', '', $a7);
-     $pallet_id = preg_replace('/[^0-9]/', '', $a8);
-     $drifttid = preg_replace('/[^0-9]/', '', $a9);
-     $stopptid = preg_replace('/[^0-9]/', '', $a10);
+     function clean_var($input) {
+          return preg_replace('/[^0-9]/', '', $input);
+     }
+
+     $input_var = array($a1, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9);
+     $rename_var = array('felH', 'felV', 'kvar', 'model_v', 'model_h', 'idling', 'pallet_id', 'drifttid', 'stopptid');
+
+     for ($i = 0; $i < count($input_var); $i++) {
+          ${$rename_var[$i]} = clean_var($input_var[$i]);
+     }
 
      $now = new DateTime;
      $datetime = $now->format("Y-m-d H:i:s.u");
@@ -58,18 +58,17 @@ if ($status == 1) {
 
      $data = select_data($sql);
 
-     foreach ($data as $row) {
-          $artikelnummer = $row['artikelnummer'];
-          $old_drifttid = $row['old_drifttid'];
-          $old_stopptid = $row['old_stopptid'];
-          $old_kassV = $row['old_kassV'];
-          $old_kassH = $row['old_kassH'];
-          $old_kvar = $row['old_kvar'];
-          $time_counter = $row['time_counter'];
-
-     }
-
      if (count($data) > 0) {
+          foreach ($data as $row) {
+               $artikelnummer = $row['artikelnummer'];
+               $old_drifttid = $row['old_drifttid'];
+               $old_stopptid = $row['old_stopptid'];
+               $old_kassV = $row['old_kassV'];
+               $old_kassH = $row['old_kassH'];
+               $old_kvar = $row['old_kvar'];
+               $time_counter = $row['time_counter'];
+          }
+
           // checks if new session should be started. If machine been off for less than 30 min then same session continues.
           if ($time_counter > 1800 or $model_v != 0 && $model_v != $artikelnummer) {
                $sql = "INSERT INTO `produktion` (`datum`, `date_start`, `date_end`, `artikelnummer`, `old_drifttid`, `old_stopptid`, `old_kassV`, `old_kassH`, `old_kvar`)
@@ -95,23 +94,6 @@ if ($status == 1) {
                }
 
                // Logs the id of pallet's the machine is throwing away defected units from.
-               $kassV_check = false;
-               $kassH_check = false;
-               $diff_kassV = $felV - $old_kassV;
-               $diff_kassH = $felH - $old_kassH;
-
-               if ($diff_kassV > 0) {
-                    $kassV_check = true;
-               } else if ($diff_kassV < 0 or $diff_kassV == 0) {
-                    $diff_kassV = 0;
-               }
-
-               if ($diff_kassH > 0) {
-                    $kassH_check = true;
-               } else if ($diff_kassH < 0 or $diff_kassH == 0) {
-                    $diff_kassH = 0;
-               }
-
                if ($model_v == 0) {
                     $model_v = $artikelnummer;
                     $model_h = $artikelnummer - 1;
@@ -128,24 +110,38 @@ if ($status == 1) {
                     insert_data($sql);
                }
 
-               if ($kassV_check) {
-                    pallet_fel($model_v, $diff_kassV);
+               // Calculates the change of kass.
+               function kass_diff($fel, $old_kass, $kass_check, $model) {
+                    $diff_kass = $fel - $old_kass;
+                    if ($diff_kass > 0) {
+                         $kass_check = true;
+                    } else if ($diff_kass < 0 or $diff_kass == 0) {
+                         $diff_kass = 0;
+                    }
+
+                    if ($kass_check) {
+                         pallet_fel($model, $diff_kass);
+                    }
+
+                    return $diff_kass;
                }
 
-               if ($kassH_check) {
-                    pallet_fel($model_h, $diff_kassH);
+               // Calculates the change of drift and stopptid.
+               function tid_diff($tid, $old_tid) {
+                    $diff_tid = $tid - $old_tid;
+
+                    if ($diff_tid < 0) {
+                         $diff_tid = 0;
+                    }
+                    return $diff_tid;
                }
 
-               $diff_drifttid = $drifttid - $old_drifttid;
-               $diff_stopptid = $stopptid - $old_stopptid;
+               $kassV_check = $kassH_check = false;
+               $diff_kassV = kass_diff($felV, $old_kassV, $kassV_check, $model_v);
+               $diff_kassH = kass_diff($felH, $old_kassH, $kassH_check, $model_h);
 
-               if ($diff_drifttid < 0) {
-                    $diff_drifttid = 0;
-               }
-
-               if ($diff_stopptid < 0) {
-                    $diff_stopptid = 0;
-               }
+               $diff_drifttid = tid_diff($drifttid, $old_drifttid);
+               $diff_stopptid = tid_diff($stopptid, $old_stopptid);
 
                if ($old_kvar != $kvar or $diff_kassV > 0 or $diff_kassH > 0) {
                     // If remaning units decrease or increase more than 5 then its because the value was changed manually and should not be counted.
