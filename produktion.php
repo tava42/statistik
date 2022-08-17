@@ -1,14 +1,14 @@
 <?php
 
-$a1 = 28; // fel H
-$a2 = 39; // fel V
-$a3 = 3; // kvar
-$a4 = 156; // Artikelnummer left st 1 DB30.DBW8
-$a5 = 155; // Artikelnummer Right st 1 DB30.DBW10
+$a1 = 36; // fel H
+$a2 = 47; // fel V
+$a3 = 294; // kvar
+$a4 = 10255; // Artikelnummer left st 1 DB30.DBW8
+$a5 = 10254; // Artikelnummer Right st 1 DB30.DBW10
 $a6 = 1; // idle DB10.DBX8.0
-$a7 = 10; // pallet_id station 10 DB30.DBW722
-$a8 = 23; // drifttid DB26.DBW14
-$a9 = 12; // stopptid DB26.DBW16
+$a7 = 9; // pallet_id station 10 DB30.DBW722
+$a8 = 30; // drifttid DB26.DBW14
+$a9 = 23; // stopptid DB26.DBW16
 $a10 = 1; // status I18.2
 
 $status = preg_replace('/[^0-9]/', '', $a10);
@@ -93,12 +93,12 @@ if ($status == 1) {
                     insert_data($sql);
                }
 
-               // Logs the id of pallet's the machine is throwing away defected units from.
+               // The machine changes artikelnummer to 0 between when one orders, this code is to avoid a 0 in the database.
                if ($model_v == 0) {
                     $model_v = $artikelnummer;
                     $model_h = $artikelnummer - 1;
                }
-
+               // Logs the id of pallet's the machine is throwing away defected units from.
                function pallet_fel($model, $diff_kass) {
                     global $pallet_id, $today;
                     $current_pallet = "pallet_{$pallet_id}";
@@ -110,7 +110,7 @@ if ($status == 1) {
                     insert_data($sql);
                }
 
-               // Calculates the change of kass.
+               // Calculates the change of kass, defected units.
                function kass_diff($fel, $old_kass, $kass_check, $model) {
                     $diff_kass = $fel - $old_kass;
                     if ($diff_kass > 0) {
@@ -126,7 +126,7 @@ if ($status == 1) {
                     return $diff_kass;
                }
 
-               // Calculates the change of drift and stopptid.
+               // Calculates the change of drift and stopptid, runtime and stoppage.
                function tid_diff($tid, $old_tid) {
                     $diff_tid = $tid - $old_tid;
 
@@ -158,10 +158,17 @@ if ($status == 1) {
                          ORDER BY date_start DESC LIMIT 1";
                     insert_data($sql);
 
-               } else {
+               } elseif ($diff_drifttid > 0 or $diff_stopptid > 0) {
                     $sql = "UPDATE `produktion`
                          SET `date_end` = '".$datetime."', `old_drifttid` = '".$drifttid."', `old_stopptid` = '".$stopptid."',
                          drifttid = COALESCE(drifttid, 0) + '".$diff_drifttid."', stopptid = COALESCE(stopptid, 0) + '".$diff_stopptid."'
+                         WHERE `datum` = '".$today."'
+                         ORDER BY date_start DESC LIMIT 1";
+                    insert_data($sql);
+
+               } else {
+                    $sql = "UPDATE `produktion`
+                         SET `date_end` = '".$datetime."'
                          WHERE `datum` = '".$today."'
                          ORDER BY date_start DESC LIMIT 1";
                     insert_data($sql);
