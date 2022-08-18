@@ -1,14 +1,14 @@
 <?php
 
-$a1 = 37; // fel H
-$a2 = 48; // fel V
-$a3 = 292; // kvar
-$a4 = 10254; // Artikelnummer left st 1 DB30.DBW8
-$a5 = 10255; // Artikelnummer Right st 1 DB30.DBW10
+$a1 = 40; // fel H
+$a2 = 51; // fel V
+$a3 = 288; // kvar
+$a4 = 10275; // Artikelnummer left st 1 DB30.DBW8
+$a5 = 10276; // Artikelnummer Right st 1 DB30.DBW10
 $a6 = 1; // idle DB10.DBX8.0
 $a7 = 9; // pallet_id station 10 DB30.DBW722
-$a8 = 33; // drifttid DB26.DBW14
-$a9 = 24; // stopptid DB26.DBW16
+$a8 = 34; // drifttid DB26.DBW14
+$a9 = 26; // stopptid DB26.DBW16
 $a10 = 1; // status I18.2
 
 $status = preg_replace('/[^0-9]/', '', $a10);
@@ -19,7 +19,7 @@ if ($status == 1) {
           if ($conn->connect_error) {
                die("Connection failed: " . $conn->connection_error);
           }
-          echo $sql."<br>\n";
+          // echo $sql."<br>\n";
           $conn->query($sql);
           $conn->close();
      }

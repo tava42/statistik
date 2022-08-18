@@ -857,7 +857,11 @@
 				foreach ($takoee as $row) {
 					$produktion = $row['produktion'];
 					$produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
-					$stopptid = $row['stopptid'];
+					if (isset($row['stopptid'])) {
+						$stopptid = $row['stopptid'];
+					} else {
+						$stopptid = 0;
+					}
 					$kass = $row['kass'];
 					if ($produktionstid != 0 && $produktion != 0) {
 						$tillgänglighet = ($produktionstid - $stopptid) / $produktionstid;
@@ -1075,7 +1079,7 @@
 			}
 
 			function pallet_fel() {
-				$sql = "SELECT * FROM pallet_fel"; // WHERE datum = current_date";
+				$sql = "SELECT * FROM pallet_fel ORDER BY datum DESC"; // WHERE datum = current_date";
 
 				$result = get_data($sql);
 				$data = $result->fetch_all(MYSQLI_ASSOC);
@@ -1706,9 +1710,9 @@
 						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 						group by message_end ORDER BY `alarm_tid`.`message_start` DESC";
 
-				// $sql = "select produktion.datum,
+				// $sql3 = "select produktion.datum,
 				// 		SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
-				// 		".$sum_antal." As produktion,
+				// 		".$sum_prod." As produktion,
 				// 		(select(produktion.kassV + produktion.kassH)) As kass,
 				// 		produktion.date_start,
 				// 		produktion.date_end,
@@ -1719,7 +1723,7 @@
 				// 		AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
 				// 		WHERE alarm_tid.message_start > '2022-02-05'
 				// 		GROUP by date(alarm_tid.message_start) DESC;";
-
+				// echo $sql3;
 				// $sql2 = "SELECT date(message_id) as datum, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, count(message_id) as count
 				// 	FROM `alarm_tid`
 				// 	WHERE date(message_start) > '2022-02-05' AND message_text NOT LIKE '%Varning%' AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
@@ -1925,8 +1929,12 @@
 				TAKOEE($dashboard);
 				echo "</div>";
 			} else {
-				dashboard();
-
+				// dashboard();
+				$search_date = false;
+				$dashboard = true;
+				echo "<div class='wrapper'>";
+				utveckling($search_date, $dashboard);
+				echo "</div>";
 		}
 
 		?>
