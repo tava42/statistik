@@ -1,14 +1,14 @@
 <?php
 
-$a1 = 36; // fel H
-$a2 = 47; // fel V
-$a3 = 294; // kvar
-$a4 = 10255; // Artikelnummer left st 1 DB30.DBW8
-$a5 = 10254; // Artikelnummer Right st 1 DB30.DBW10
+$a1 = 37; // fel H
+$a2 = 48; // fel V
+$a3 = 292; // kvar
+$a4 = 10254; // Artikelnummer left st 1 DB30.DBW8
+$a5 = 10255; // Artikelnummer Right st 1 DB30.DBW10
 $a6 = 1; // idle DB10.DBX8.0
 $a7 = 9; // pallet_id station 10 DB30.DBW722
-$a8 = 30; // drifttid DB26.DBW14
-$a9 = 23; // stopptid DB26.DBW16
+$a8 = 33; // drifttid DB26.DBW14
+$a9 = 24; // stopptid DB26.DBW16
 $a10 = 1; // status I18.2
 
 $status = preg_replace('/[^0-9]/', '', $a10);
@@ -46,12 +46,16 @@ if ($status == 1) {
           ${$rename_var[$i]} = clean_var($input_var[$i]);
      }
 
-     $now = new DateTime;
-     $datetime = $now->format("Y-m-d H:i:s.u");
+     $t = microtime(true);
+     $micro = sprintf("%06d",($t - floor($t)) * 1000000);
+     $time = new DateTime(date('Y-m-d H:i:s.'.$micro, $t));
+     $datetime = $time->format("Y-m-d H:i:s.u");
+     $timestamp = $time->format("U.u");
+
      $today = date('Y-m-d');
      $hour = intval(date('H'));
 
-     $sql = "SELECT artikelnummer, old_drifttid, old_stopptid, old_kassV, old_kassH, old_kvar, (UNIX_TIMESTAMP(now(3)) - UNIX_TIMESTAMP(date_end)) As time_counter
+     $sql = "SELECT artikelnummer, old_drifttid, old_stopptid, old_kassV, old_kassH, old_kvar, date_end
           FROM produktion
           WHERE datum = '".$today."'
           ORDER BY date_start DESC LIMIT 1";
@@ -66,7 +70,11 @@ if ($status == 1) {
                $old_kassV = $row['old_kassV'];
                $old_kassH = $row['old_kassH'];
                $old_kvar = $row['old_kvar'];
-               $time_counter = $row['time_counter'];
+
+               $time = new DateTime(date($row['date_end']));
+               $date_end = $time->format("U.u");
+               $time_counter = round($timestamp - $date_end, 3);
+
           }
 
           // checks if new session should be started. If machine been off for less than 30 min then same session continues.
@@ -96,7 +104,7 @@ if ($status == 1) {
                // The machine changes artikelnummer to 0 between when one orders, this code is to avoid a 0 in the database.
                if ($model_v == 0) {
                     $model_v = $artikelnummer;
-                    $model_h = $artikelnummer - 1;
+                    $model_h = $artikelnummer + 1;
                }
                // Logs the id of pallet's the machine is throwing away defected units from.
                function pallet_fel($model, $diff_kass) {
