@@ -1,17 +1,18 @@
 <?php
 
-$a1 = 40; // fel H
-$a2 = 51; // fel V
-$a3 = 288; // kvar
-$a4 = 10275; // Artikelnummer left st 1 DB30.DBW8
-$a5 = 10276; // Artikelnummer Right st 1 DB30.DBW10
-$a6 = 1; // idle DB10.DBX8.0
-$a7 = 9; // pallet_id station 10 DB30.DBW722
-$a8 = 34; // drifttid DB26.DBW14
-$a9 = 26; // stopptid DB26.DBW16
-$a10 = 1; // status I18.2
+$a1 = 41; // fel H
+$a2 = 52; // fel V
+$a3 = 287; // kvar
+$a4 = 10254; // Artikelnummer left st 1 DB30.DBW8
+$a5 = 1; // idle DB10.DBX8.0
+$a6 = 9; // pallet_id station 10 DB30.DBW722
+$a7 = 36; // drifttid DB26.DBW14
+$a8 = 27; // stopptid DB26.DBW16
+$a9 = 1; // Kör lackerade DB9.DBX7.0
+$a10 = 0; // Kör Alu DB9.DBX7.1
+$a11 = 1; // status I18.2
 
-$status = preg_replace('/[^0-9]/', '', $a10);
+$status = preg_replace('/[^0-9]/', '', $a11);
 
 if ($status == 1) {
      function insert_data($sql) {
@@ -19,7 +20,7 @@ if ($status == 1) {
           if ($conn->connect_error) {
                die("Connection failed: " . $conn->connection_error);
           }
-          // echo $sql."<br>\n";
+          echo $sql."<br>\n";
           $conn->query($sql);
           $conn->close();
      }
@@ -39,8 +40,8 @@ if ($status == 1) {
           return preg_replace('/[^0-9]/', '', $input);
      }
 
-     $input_var = array($a1, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9);
-     $rename_var = array('felH', 'felV', 'kvar', 'model_v', 'model_h', 'idling', 'pallet_id', 'drifttid', 'stopptid');
+     $input_var = array($a1, $a2, $a3, $a4, $a5, $a6, $a7, $a8, $a9, $a10);
+     $rename_var = array('felH', 'felV', 'kvar', 'model', 'idling', 'pallet_id', 'drifttid', 'stopptid', 'lack', 'alu');
 
      for ($i = 0; $i < count($input_var); $i++) {
           ${$rename_var[$i]} = clean_var($input_var[$i]);
@@ -62,6 +63,23 @@ if ($status == 1) {
 
      $data = select_data($sql);
 
+     // The machine does not recognize the difference of colors in models, just size.
+     function get_model($alu, $lack, $model) {
+          if ($lack == 1 && $alu == 1) {
+               $new_model = $model + 20;
+          } elseif ($lack == 1) {
+               $new_model = $model + 40;
+          } else {
+               $new_model = $model;
+          }
+          return $new_model;
+     }
+
+     if ($model != 0) {
+          $model_v = get_model($alu, $lack, $model);
+          $model_h = $model_v + 1;
+     }
+
      if (count($data) > 0) {
           foreach ($data as $row) {
                $artikelnummer = $row['artikelnummer'];
@@ -74,17 +92,22 @@ if ($status == 1) {
                $time = new DateTime(date($row['date_end']));
                $date_end = $time->format("U.u");
                $time_counter = round($timestamp - $date_end, 3);
+          }
 
+          // The machine changes artikelnummer to 0 between when one orders, this code is to avoid a 0 in the database.
+          if ($model == 0) {
+               $model_v = $artikelnummer;
+               $model_h = $artikelnummer + 1;
           }
 
           // checks if new session should be started. If machine been off for less than 30 min then same session continues.
-          if ($time_counter > 1800 or $model_v != 0 && $model_v != $artikelnummer) {
+          if ($time_counter > 1800 or $model != 0 && $model_v != $artikelnummer) {
                $sql = "INSERT INTO `produktion` (`datum`, `date_start`, `date_end`, `artikelnummer`, `old_drifttid`, `old_stopptid`, `old_kassV`, `old_kassH`, `old_kvar`)
                     VALUES ('".$today."', '".$datetime."', '".$datetime."', '".$model_v."', '".$drifttid."', '".$stopptid."', '".$felV."', '".$felH."', '".$kvar."')";
                insert_data($sql);
           } else {
                // Setup time is the time it takes to change model in the machine.
-               if ($model_v == 0) {
+               if ($model == 0) {
                     $sql = "UPDATE `produktion`
                     SET `setup_time` = COALESCE(`setup_time`, 0) + '".$time_counter."'
                     WHERE `datum` = '".$today."'
@@ -101,11 +124,6 @@ if ($status == 1) {
                     insert_data($sql);
                }
 
-               // The machine changes artikelnummer to 0 between when one orders, this code is to avoid a 0 in the database.
-               if ($model_v == 0) {
-                    $model_v = $artikelnummer;
-                    $model_h = $artikelnummer + 1;
-               }
                // Logs the id of pallet's the machine is throwing away defected units from.
                function pallet_fel($model, $diff_kass) {
                     global $pallet_id, $today;
@@ -185,7 +203,7 @@ if ($status == 1) {
 
      } else {
           // New day, start new session.
-          if ($model_v == 0) {
+          if ($model == 0) {
                $sql = "SELECT artikelnummer FROM produktion ORDER BY date_start DESC LIMIT 1";
                $data = select_data($sql);
                foreach ($data as $row) {
