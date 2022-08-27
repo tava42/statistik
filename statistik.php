@@ -15,39 +15,32 @@
 
 	<body>
 		<nav class="navbar" align="center">
-			<br>
-				<form method="post">
-				<input type="submit" name="today" class="button" value="Idag">
-				<input type="submit" name="last_week" class="button" value="Senaste 7 dagar">
-				<input type="submit" name="last_month" class="button" value="Senaste 30 dagar">
-				<input type="submit" name="TAKOEE" class="button" value="TAKOEE">
-				<input type='submit' name='produktion' class='button' value='Produktion'>
-				<input type="submit" name="utveckling" class="button" value="Utveckling">
-				<input type="submit" name="pallet_fel" class="button" value="Pallet fel">
-				<input type="submit" name="overview" class="button" value="Översikt">
-				<input type="submit" name="avg_time" class="button" value="Genomsnittlig stopptid">
-				<input type="hidden" name="inc" value="0" />
-				<input type="checkbox" name="inc" value="1">
-				<label for="inc"> Inkludera varning</label>
-				<br>
-				<br>
 
-				Från:
-				<input type="date" name="dateFrom" value="<?php echo date('Y-m-d'); ?>">
-				Till:
-				<input type="date" name="dateTo" value="<?php echo date('Y-m-d'); ?>">
-				<input type="submit" name="search_date" class="button" value="Sök">
-				<input type="submit" name="search_utveckling" class="button" value="Sök utveckling">
-
-				<input type="text" id="search" align="right" name="search_form" size="41px" placeholder="Sök efter larm">
-				<input type="submit" name="search_larm" class="button" value="Sök">
-				<input type="submit" name="search_all" class="button" value="Sök allt">
+				<form class="form_nav" method="post">
+					<span class="buttons">
+						<button data-animation="1" type="submit" name="today" class="link">Larm</button>
+						<button type="submit" name="TAKOEE" class="link">TAKOEE</button>
+						<button type='submit' name='produktion' class="link">Produktion</button>
+						<button type="submit" name="utveckling" class="link">Utveckling</button>
+						<button type="submit" name="pallet_fel" class="link">Pallet fel</button>
+					 	<button type="submit" name="overview" class="link">Översikt</button>
 				</form>
-				<br>
+
+				<form class="search" method="post">
+					<input type="text" name="search_form" placeholder="Sök efter larm" class="input">
+					<button type="submit" name="search_larm" class="button">
+						<i class="gg-search"></i>
+					</button>
+
+				</form>
+				<!-- <input type="hidden" name="inc" value="0"/> -->
+				<!-- <input type="checkbox" name="inc" value="1"> -->
+				<!-- <label for="inc"> Inkludera varning</label> -->
+
 
 		</nav>
-		<br>
-		<br>
+		<!-- <br>
+		<br> -->
 		<script type="text/javascript">
 
 			function sortTable(n) {
@@ -803,6 +796,7 @@
 
 			}
 
+
 		</script>
 
 		<?php
@@ -837,11 +831,11 @@
 			}
 
 			function check_exclude() {
-				if ($_POST['inc'] == '0') {
+				// if ($_POST['inc'] == '0') {
 					$exclude_varning = " AND message_text NOT LIKE '%Varning%'";
-				} else {
-					$exclude_varning = "";
-				}
+				// } else {
+					// $exclude_varning = "";
+				// }
 				return $exclude_varning;
 			}
 
@@ -900,27 +894,27 @@
 
 			}
 
-			function recent($interval) {
-
+			function larm() {
 				$exclude_varning = check_exclude();
+				echo "<div class='stats'>
+						<p class='inline' id='antal'></p>
+						<p class='inline' id='tid'></p>
+					</div>";
 
 				$sql = "SELECT
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid
-					WHERE DATE(message_start) $interval $exclude_varning
+					WHERE DATE(message_start) = CURRENT_DATE() $exclude_varning
 					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					GROUP BY message_text
 					ORDER BY count(message_text) DESC;";
 
 				$result = get_data($sql);
 
+
 				if ($result->num_rows > 0) {
-					echo "<div id='stats' align='center'>
-							<p class='inline' id='antal'></p>
-							<p class='inline' id='tid'></p>
-						</div>";
 					$headers = array("Minuter", "Antal", "Larm");
 
 					echo "<table width='80%' id='myTable'>";
@@ -950,36 +944,25 @@
 
 			}
 
-			function utveckling($search_date, $dashboard) {
+			function utveckling($from, $to, $from2, $to2, $search_date, $dashboard) {
 				$exclude_varning = " AND message_text NOT LIKE '%Varning%'
 					AND message_text NOT LIKE '%Lägg i sista%'
 					AND message_text NOT LIKE '%BYT PALL%'
 					";
-				$first = 'CURRENT_DATE - INTERVAL 7 DAY AND current_date ';
-				$second = 'current_date - INTERVAL 15 DAY AND current_date - INTERVAL 8 DAY ';
+				$today = date('Y-m-d');
+
+				// $first = 'CURRENT_DATE - INTERVAL 7 DAY AND current_date ';
+				// $second = 'current_date - INTERVAL 15 DAY AND current_date - INTERVAL 8 DAY ';
 
 				if ($dashboard == false) {
-					$exclude_varning = check_exclude();
-					$from = date('Y-m-d', strtotime($_POST['dateFrom']));
-					$to = date('Y-m-d', strtotime($_POST['dateTo']));
 
-					//	echo "Utveckling mellan " . date('Y-m-d', strtotime($_POST['dateFrom'] . '+30 days'));
+					$first = '"' .$from2. '' .
+					 '" AND "' . $to2 . '"';
+					$second = '"' . $from . '" AND "' . $to . '"';
 
-					$start = new DateTime($_POST['dateFrom'] . '-1 days');
-					$end = new DateTime($_POST['dateTo']);
-					$diff = $start->diff($end);
+					echo "<br><div align='center'>" . $from2 . ' days' . " till " .
+						$to2 . " jämfört med " . $from . " till ". $to . "</div><br>";
 
-				 	if ($search_date) {
-					 	$first = '"' . $from . '" AND "' . $to . '"';
-					 	$second = '"'. date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) .
-						 '" AND "' . date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . '"';
-						 echo "<br><div align='center'>" . date('Y-m-d', strtotime($_POST['dateFrom'] . '-' . $diff->format('%d') . ' days')) . " till " .
-						 	date('Y-m-d', strtotime($_POST['dateFrom'] . '-1 days')) . " jämfört med " . $from . " till ". $to . "</div><br>";
-					} else {
-						echo "<p align='center'>Denna månaden jämfört med förra månaden</p>";
-						$first = 'CURRENT_DATE - INTERVAL 30 DAY AND current_date ';
-						$second = 'current_date - INTERVAL 61 DAY AND current_date - INTERVAL 31 DAY ';
-					}
 
 				}
 
@@ -989,7 +972,7 @@
 					message_text As Larm,
 					message_start As Datum
 					FROM alarm_tid
-					WHERE DATE(message_start) BETWEEN $first
+					WHERE DATE(message_start) BETWEEN $second
 					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					group by message_text
 					union
@@ -999,7 +982,7 @@
 					message_text As Larm,
 					message_start As Datum
 					FROM alarm_tid
-					WHERE DATE(message_start) BETWEEN $second
+					WHERE DATE(message_start) BETWEEN $first
 					$exclude_varning AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
 					group by message_text
 					ORDER BY `Larm`  ASC;";
@@ -1072,7 +1055,7 @@
 					} else {
 						$type = "dash";
 					}
-					echo "<script type='text/javascript'>dashboardUtveckling('".$type."');</script><br><br>";
+					echo "<script type='text/javascript'>dashboardUtveckling('".$type."');</script>";
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
@@ -1438,9 +1421,9 @@
 					from alarm_tid
 					group by yearweek(message_start, 1) DESC";
 
-
 				$result = get_data($sql_weeks);
 				$result_dates = get_data($sql_range);
+				echo $sql_days;
 				echo "<div class='wrapper'>";
 				if ($result->num_rows > 0) {
 					$headers = array("År", "Vecka", "Minuter", "Antal", "Larm");
@@ -1479,21 +1462,31 @@
 			}
 
 			function search_larm2($search_larm) {
-				$sql_days = "SELECT
+				$conn = new mysqli('localhost', 'root', '', 'steelform');
+
+				if ($conn->connect_error) {
+					die("Connection failed: " . $conn->connection_error);
+				}
+
+				$sql_days = $conn->prepare("SELECT
 					date(message_start) as Datum,
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
 					COUNT(message_text) As Antal,
 					message_text AS Larm
 					FROM alarm_tid
-					WHERE message_text = '".$search_larm."'
+					WHERE message_text = ?
 					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
-					GROUP BY DATE(message_start) DESC";
+					GROUP BY DATE(message_start) DESC");
 
 				$sql_range = "SELECT date(message_start) as Datum
 					from alarm_tid
 					group by date(message_start) DESC";
 
-				$result = get_data($sql_days);
+				$sql_days->bind_param('s', $search_larm);
+				$sql_days->execute();
+
+				$result = $sql_days->get_result();
+				$conn->close();
 				$result_dates = get_data($sql_range);
 				// $period = new DatePeriod(
 				//      new DateTime('2021-07-06'),
@@ -1820,7 +1813,7 @@
 							$kvalite = ($produktion - $kass) / $produktion;
 							$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
 
-							echo "<tr><td class='search_date'>" . $row['datum'] . "</td><td>" . $produktion . "</td>
+							echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td>
 
 							<td>" . bcdiv(($produktionstid), 1, 2)  . "</td><td>" . bcdiv(($stopptid), 1, 2) . "</td><td>" .
 								$kass . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td><td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
@@ -1838,25 +1831,22 @@
 
 
 			if (isset($_POST['today'])) {
+				$today = date('Y-m-d');
 				echo "<div class='wrapperRecent'>";
-				echo "<p class='recentPeriod' align='center'>Idag</p>";
-				$interval = " = CURRENT_DATE() ";
-				recent($interval);
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='larm_dateFrom' value='".$today."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='larm_dateTo' value='".$today."'>
+					<button type='submit' name='search_date' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
+
+				larm();
 				echo "</div>";
 
-			} else if (isset($_POST['last_week'])) {
-				echo "<div class='wrapperRecent'>";
-				echo "<p class='recentPeriod' align='center'>Senaste 7 dagar</p>";
-				$interval = " >= current_date - INTERVAL 7 DAY";
-				recent($interval);
-				echo "</div>";
-
-			} else if (isset($_POST['last_month'])) {
-				echo "<div class='wrapperRecent'>";
-				echo "<p class='recentPeriod' align='center'>Senaste 30 dagar</p>";
-				$interval = " >= current_date - INTERVAL 30 DAY";
-				recent($interval);
-				echo "</div>";
 
 			} else if (isset($_POST['avg_time'])) {
 				echo "<div class='wrapperRecent'>";
@@ -1865,10 +1855,22 @@
 				echo "</div>";
 
 			} else if (isset($_POST['search_date'])) {
+				$today = date('Y-m-d');
+				$from = date('Y-m-d', strtotime($_POST['larm_dateFrom']));
+				$to = date('Y-m-d', strtotime($_POST['larm_dateTo']));
+
 				echo "<div class='wrapperRecent'>";
-				$from = date('Y-m-d', strtotime($_POST['dateFrom']));
-				$to = date('Y-m-d', strtotime($_POST['dateTo']));
-				echo "<p align='center'>Från: $from  Till:  $to </p>";
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='larm_dateFrom' value='".$from."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='larm_dateTo' value='".$to."'>
+					<button type='submit' name='search_date' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
+
 				search_date($from, $to);
 				echo "</div>";
 
@@ -1884,15 +1886,47 @@
 			} else if (isset($_POST['utveckling'])) {
 				$search_date = false;
 				$dashboard = false;
+				$from = date('Y-m-d', strtotime('-1 week'));
+				$to = date('Y-m-d');
 				echo "<div class='wrapper'>";
-				utveckling($search_date, $dashboard);
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='dateFrom' value='".$from."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='dateTo' value='".$to."'>
+					<button type='submit' name='search_utveckling' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
+				$from2 = date('Y-m-d', strtotime('-1 week -1 day', strtotime($from)));
+				$to2 = date('Y-m-d', strtotime('-1 day', strtotime($from)));
+				utveckling($from, $to, $from2, $to2, $search_date, $dashboard);
 				echo "</div>";
 
 			} else if (isset($_POST['search_utveckling'])) {
 				$search_date = true;
 				$dashboard = false;
+				$from = date('Y-m-d', strtotime($_POST['dateFrom']));
+				$to = date('Y-m-d', strtotime($_POST['dateTo']));
 				echo "<div class='wrapper'>";
-				utveckling($search_date, $dashboard);
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='dateFrom' value='".$from."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='dateTo' value='".$to."'>
+					<button type='submit' name='search_utveckling' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
+				$exclude_varning = check_exclude();
+				$start = new DateTime(date('Y-m-d', strtotime('-1 day', strtotime($from))));
+				$end = new DateTime($to);
+				$diff = $start->diff($end);
+				$from2 = date('Y-m-d', strtotime('-'.$diff->format('%a').' day', strtotime($_POST['dateFrom'])));
+				$to2 = date('Y-m-d', strtotime('-1 day', strtotime($_POST['dateFrom'])));
+				utveckling($from, $to, $from2, $to2, $search_date, $dashboard);
 				echo "</div>";
 
 			} else if (isset($_POST['pallet_fel'])) {
@@ -1901,9 +1935,15 @@
 				echo "</div>";
 
 			} else if (isset($_POST['search_larm'])) {
+				// $search_larm = $_POST['search_form'];
 				$search_larm = ltrim(filter_input(INPUT_POST, 'search_form'));
+				$search_larm = trim($search_larm);
+				$search_larm = stripslashes($search_larm);
+				$search_larm = htmlspecialchars($search_larm);
+				$search_larm = str_replace(';', '', $search_larm);
 				// echo "<p align='center'>" . $search_larm . "</p>";
-				search_larm($search_larm);
+
+				search_larm2($search_larm);
 
 			} else if (isset($_POST['ajax_larm'])) {
 				$search_larm = $_POST['ajax_larm'];
@@ -1933,7 +1973,7 @@
 				$search_date = false;
 				$dashboard = true;
 				echo "<div class='wrapper'>";
-				utveckling($search_date, $dashboard);
+				// utveckling($search_date, $dashboard);
 				echo "</div>";
 		}
 
