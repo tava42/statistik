@@ -437,6 +437,7 @@
 							  label: "Tillgänglighet",
 							  data: t.reverse(),
 							  fill: false,
+							  hidden: true,
 							  backgroundColor: "#68BBE3",
 							  borderColor: "#68BBE3",
 							  borderCapStyle: 'butt'
@@ -461,13 +462,14 @@
 							  label: "OEE",
 							  data: oee.reverse(),
 							  fill: false,
+							  hidden: true,
 							  backgroundColor: "#003060",
 							  borderColor: "#003060",
 							  borderCapStyle: 'butt'
 						}]
 					},
 						options: {
-							lineTension: 0.4,
+							lineTension: 0.6,
 		  					responsive: true,
 		  					maintainAspectRatio: false,
 							scales: {
@@ -652,26 +654,57 @@
 			function chartPallet() {
 				var label = [];
 				for ( var i = 1; i <= 15; i++ ) {
-					label.push(`pallet_${i}`);
+					label.push(`pallet ${i}`);
 				}
 				datum = [];
 				artikelnummer = [];
 				pallet = [];
+				palletIdag = [];
 				sum = 0;
+
 
 				for ( var i = 0; i <= 14; i++ ) {
 					for ( var x = 1; x < myTable.rows.length; x++ ) {
 						var row = parseInt(myTable.rows[x].cells[i].innerHTML);
 						if (row > 0) {
 							sum += row;
+
 						}
 					}
 					pallet.push(sum);
 					sum = 0;
 				}
 
+				var today = new Date();
+				var dd = today.getDate();
+				var mm = today.getMonth()+1;
+				var yyyy = today.getFullYear();
+
+				if(dd<10) {
+				    dd='0'+dd;
+				}
+
+				if(mm<10) {
+				    mm='0'+mm;
+				}
+
+				today = yyyy+'-'+mm+'-'+dd;
+
+				for ( var i = 0; i <= 14; i++ ) {
+						for ( var x = 1; x < myTable.rows.length; x++ ) {
+							if (myTable.rows[x].cells[16].innerHTML == "2022-08-18") {
+								var row = parseInt(myTable.rows[x].cells[i].innerHTML);
+								if (row > 0) {
+									sum += row;
+								}
+							}
+						}
+					palletIdag.push(sum);
+					sum = 0;
+				}
+				console.log(Math.max(...palletIdag) + 10);
 				var ctx = document.getElementById("prodChart").getContext("2d");
-				console.log(pallet);
+				// console.log(pallet);
 				var myChart = new Chart(ctx, {
 					type: 'bar',
 					data: {
@@ -680,9 +713,17 @@
 							label: "Pallet fel",
 							type: "bar",
 							data: pallet,
-							backgroundColor: '#6496C8',
-							borderColor: '#6496C8',
-						    }]
+							hidden: true,
+							backgroundColor: '#B9CFE6',
+							borderColor: '#B9CFE6',
+						},
+						{
+ 							label: "Pallet fel idag",
+ 							type: "bar",
+ 							data: palletIdag,
+ 							backgroundColor: '#6496C8',
+ 							borderColor: '#6496C8',
+ 						    }]
 					},
 					options: {
 						responsive: true,
@@ -690,6 +731,10 @@
 						lineTension: 0.4,
 						scales: {
 							y: {
+								//
+								// Max: 100,
+								// Min: 1
+
 							}
 						}
 					}
@@ -896,6 +941,19 @@
 
 			function larm() {
 				$exclude_varning = check_exclude();
+				$today = date('Y-m-d');
+
+				echo "<div class='wrapperRecent'>";
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='larm_dateFrom' value='".$today."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='larm_dateTo' value='".$today."'>
+					<button type='submit' name='search_date' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
 				echo "<div class='stats'>
 						<p class='inline' id='antal'></p>
 						<p class='inline' id='tid'></p>
@@ -941,7 +999,67 @@
 					} else {
 					echo "<p align='center'>Inga resultat</p>";
 					}
+				echo "</div>";
+			}
 
+			function search_date() {
+				$exclude_varning = check_exclude();
+
+				$today = date('Y-m-d');
+				$from = date('Y-m-d', strtotime($_POST['larm_dateFrom']));
+				$to = date('Y-m-d', strtotime($_POST['larm_dateTo']));
+
+				echo "<div class='wrapperRecent'>";
+				echo "<div class='date_header'>
+
+					<form class='search_date' method='post'>
+					<input type='date' class='date_form' name='larm_dateFrom' value='".$from."'>
+					<p class='fromto'>-</p>
+					<input type='date' class='date_form' name='larm_dateTo' value='".$to."'>
+					<button type='submit' name='search_date' class='button_date'>
+						<i class='gg-search'></i>
+					</button></form>
+					</div>";
+
+
+				$sql = "SELECT
+					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
+					COUNT(message_text) AS Antal,
+					message_text AS Larm
+					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					GROUP BY message_text
+					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC";
+
+				$result = get_data($sql);
+
+				if ($result->num_rows > 0) {
+					echo "<div id='stats' align='center'>
+							<p class='inline' id='antal'></p>
+							<p class='inline' id='tid'></p>
+						</div>";
+					$headers = array("Minuter", "Antal", "Larm");
+					echo "<table style='width:80%;' id='myTable'>";
+					create_table($headers);
+
+					$sum_antal = 0;
+					$sum_tid = 0;
+
+					while($row = $result->fetch_assoc()) {
+						echo "<tr><td>" . bcdiv(($row["Tid"]), 1, 1) . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
+						$sum_antal += $row["Antal"];
+						$sum_tid += $row["Tid"];
+					}
+					echo "</tr>";
+					echo "</table><br><br>";
+					echo "<script type='text/javascript'>
+							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($sum_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
+							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
+						</script><br><br>";
+				} else {
+					echo "<p align='center'>Inga resultat</p>";
+				}
+				echo "</div>";
 			}
 
 			function utveckling($from, $to, $from2, $to2, $search_date, $dashboard) {
@@ -1133,49 +1251,6 @@
 					echo "</tr>";
 					echo "</table><br><br>";
 
-				} else {
-					echo "<p align='center'>Inga resultat</p>";
-				}
-			}
-
-			function search_date($from, $to) {
-
-				$exclude_varning = check_exclude();
-
-				$sql = "SELECT
-					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
-					COUNT(message_text) AS Antal,
-					message_text AS Larm
-					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
-					GROUP BY message_text
-					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC";
-
-				$result = get_data($sql);
-
-				if ($result->num_rows > 0) {
-					echo "<div id='stats' align='center'>
-							<p class='inline' id='antal'></p>
-							<p class='inline' id='tid'></p>
-						</div>";
-					$headers = array("Minuter", "Antal", "Larm");
-					echo "<table style='width:80%;' id='myTable'>";
-					create_table($headers);
-
-					$sum_antal = 0;
-					$sum_tid = 0;
-
-					while($row = $result->fetch_assoc()) {
-						echo "<tr><td>" . bcdiv(($row["Tid"]), 1, 1) . "</td><td>" . $row["Antal"] . "</td><td>" . $row["Larm"] . "</td></tr>";
-						$sum_antal += $row["Antal"];
-						$sum_tid += $row["Tid"];
-					}
-					echo "</tr>";
-					echo "</table><br><br>";
-					echo "<script type='text/javascript'>
-							document.getElementById('antal').innerHTML = 'Sum tid: ".bcdiv(($sum_tid / 60), 1, 1)." timmar&nbsp;&nbsp|&nbsp&nbsp;';
-							document.getElementById('tid').innerHTML = 'Sum antal: ".$sum_antal."';
-						</script><br><br>";
 				} else {
 					echo "<p align='center'>Inga resultat</p>";
 				}
@@ -1657,7 +1732,9 @@
 							foreach ($headers as $key) {
 								if ($row[$key] != "") {
 									if ($key == 'date_start' or $key == 'date_end') {
-										$row[$key] = substr($row[$key], 0, -4);
+										if (strlen($row[$key]) == 26) {
+											$row[$key] = substr($row[$key], 0, -7);
+										}
 									}
 									$echo .= "<td>" . $row[$key] . "</td>";
 								} else {
@@ -1831,47 +1908,21 @@
 
 
 			if (isset($_POST['today'])) {
-				$today = date('Y-m-d');
-				echo "<div class='wrapperRecent'>";
-				echo "<div class='date_header'>
-
-					<form class='search_date' method='post'>
-					<input type='date' class='date_form' name='larm_dateFrom' value='".$today."'>
-					<p class='fromto'>-</p>
-					<input type='date' class='date_form' name='larm_dateTo' value='".$today."'>
-					<button type='submit' name='search_date' class='button_date'>
-						<i class='gg-search'></i>
-					</button></form>
-					</div>";
-
 				larm();
-				echo "</div>";
 
+			} else if (isset($_POST['search_date'])) {
+				search_date();
+
+			} else if (isset($_POST['TAKOEE'])) {
+				$dashboard = false;
+				echo "<div class='wrapper'>";
+				TAKOEE($dashboard);
+				echo "</div>";
 
 			} else if (isset($_POST['avg_time'])) {
 				echo "<div class='wrapperRecent'>";
 				echo "<p align='center'>Genomsnittlig stopptid per larm</p>";
 				average();
-				echo "</div>";
-
-			} else if (isset($_POST['search_date'])) {
-				$today = date('Y-m-d');
-				$from = date('Y-m-d', strtotime($_POST['larm_dateFrom']));
-				$to = date('Y-m-d', strtotime($_POST['larm_dateTo']));
-
-				echo "<div class='wrapperRecent'>";
-				echo "<div class='date_header'>
-
-					<form class='search_date' method='post'>
-					<input type='date' class='date_form' name='larm_dateFrom' value='".$from."'>
-					<p class='fromto'>-</p>
-					<input type='date' class='date_form' name='larm_dateTo' value='".$to."'>
-					<button type='submit' name='search_date' class='button_date'>
-						<i class='gg-search'></i>
-					</button></form>
-					</div>";
-
-				search_date($from, $to);
 				echo "</div>";
 
 			} else if (isset($_POST['search_dateTAKOEE'])) {
@@ -1963,18 +2014,15 @@
 			} else if (isset($_POST['produktion'])) {
 				produktion();
 
-			} else if (isset($_POST['TAKOEE'])) {
-				$dashboard = false;
-				echo "<div class='wrapper'>";
-				TAKOEE($dashboard);
-				echo "</div>";
 			} else {
 				// dashboard();
-				$search_date = false;
-				$dashboard = true;
-				echo "<div class='wrapper'>";
+				// $search_date = false;
+				// $dashboard = true;
+				// echo "<div class='wrapper'>";
 				// utveckling($search_date, $dashboard);
-				echo "</div>";
+				// larm();
+				larm();
+				// echo "</div>";
 		}
 
 		?>
