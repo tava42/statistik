@@ -11,6 +11,9 @@
 
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+	</head>
+
 	<script src="alarm_old/jquery.min.js"></script>
 
 	<body>
@@ -21,6 +24,7 @@
 						<button data-animation="1" type="submit" name="today" class="link">Larm</button>
 						<button type="submit" name="TAKOEE" class="link">TAKOEE</button>
 						<button type='submit' name='produktion' class="link">Produktion</button>
+						<button type='submit' name='produktionstid' class="link">Produktiontid</button>
 						<button type="submit" name="utveckling" class="link">Utveckling</button>
 						<button type="submit" name="pallet_fel" class="link">Pallet fel</button>
 					 	<button type="submit" name="overview" class="link">Översikt</button>
@@ -379,17 +383,48 @@
 				var k = [];
 				var oee = [];
 
+				var sum_produktion = 0;
+				var sum_produktionstid = 0;
+				var sum_stopptid = 0;
+				var sum_stillestånd = 0;
+				var sum_prod = 0;
+
+
+
 				for ( var i = 1; i < myTable.rows.length; i++ ) {
 				    label.push(myTable.rows[i].cells[0].innerHTML);
 				    produktion.push(myTable.rows[i].cells[1].innerHTML);
 				    produktionstid.push(myTable.rows[i].cells[2].innerHTML * 60);
 				    stopptid.push(myTable.rows[i].cells[3].innerHTML * 60);
-				    kass.push(myTable.rows[i].cells[4].innerHTML);
-				    t.push(myTable.rows[i].cells[7].innerHTML.replace('%', ''));
-				    a.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
-				    k.push(myTable.rows[i].cells[9].innerHTML.replace('%', ''));
-				    oee.push(myTable.rows[i].cells[10].innerHTML.replace('%', ''));
+				    kass.push(myTable.rows[i].cells[5].innerHTML);
+				    t.push(myTable.rows[i].cells[8].innerHTML.replace('%', ''));
+				    a.push(myTable.rows[i].cells[9].innerHTML.replace('%', ''));
+				    k.push(myTable.rows[i].cells[10].innerHTML.replace('%', ''));
+				    oee.push(myTable.rows[i].cells[11].innerHTML.replace('%', ''));
+
+				    sum_produktion += parseFloat(myTable.rows[i].cells[1].innerHTML);
+				    sum_produktionstid += parseFloat(myTable.rows[i].cells[2].innerHTML);
+				    sum_stopptid += parseFloat(myTable.rows[i].cells[3].innerHTML);
+				    // sum_stillestånd += parseInt(myTable.rows[i].cells[4].innerHTML);
+
+
 				}
+
+				// document.getElementById("Produktion").textContent= "Produktion: " + (sum_produktion).toFixed(2);
+				// document.getElementById("Produktionstid").textContent= "Produktionstid: " + (sum_produktionstid / sum_produktionstid).toFixed(2);
+				document.getElementById("Prod/h").textContent= "Prod: " + (sum_produktion  / sum_produktionstid).toFixed(2);
+				document.getElementById("Stopptid").textContent= "Stopptid: " + ((sum_stopptid  / sum_produktionstid) * 60).toFixed(2) + " min";
+
+				// document.getElementById("Produktion").textContent= "Produktion: " + (sum_produktion  / (myTable.rows.length - 1)).toFixed(2);
+				// document.getElementById("Produktionstid").textContent= "Produktionstid: " + (sum_produktionstid  / (myTable.rows.length - 1)).toFixed(2);
+				// document.getElementById("Stopptid").textContent= "Stopptid: " + (sum_stopptid  / (myTable.rows.length - 1)).toFixed(2);
+				// document.getElementById("Stopptid").textContent= "Stopptid: " + (sum_stopptid).toFixed(2);
+				// // document.getElementById("Stillestånd").textContent= sum_stillestånd  / (myTable.rows.length - 1);
+				// document.getElementById("Prod/h").textContent= "Prod/h: " + (sum_prod  / (myTable.rows.length - 1)).toFixed(0);
+				console.log(sum_produktion, sum_produktionstid);
+				// document.getElementById("Produktionstid").textContent= "Produktionstid: " + (sum_produktionstid  / (myTable.rows.length - 1)).toFixed(2);
+				// document.getElementById("Stillestånd").textContent= sum_stillestånd  / (myTable.rows.length - 1);
+
 
 				var ctx = document.getElementById("prodChart").getContext("2d");
 
@@ -484,6 +519,303 @@
 					   	}
 
 				});
+
+				function onRowClick(tableId, callback) {
+					var table = document.getElementById(tableId),
+					     rows = table.getElementsByTagName("tr"), i;
+					for (i = 1; i < rows.length; i++) {
+					     table.rows[i].onclick = function (row) {
+					          return function () {
+					              callback(row);
+					          };
+					     }(table.rows[i]);
+					}
+				};
+
+				onRowClick("myTable", function (row){
+					var date = row.getElementsByTagName("td")[0].innerHTML;
+					$.ajax({
+	    					url: 'statistik.php',
+	    					type: 'POST',
+	    					data: { "search_dateTAKOEE": date },
+	    						success: function(response) {
+	    							$("body").html(response);
+								$('html,body').scrollTop(0);
+							}
+
+					});
+				});
+
+
+			}
+
+			function produktionstid() {
+
+				var label = [];
+				var produktion = [];
+				var produktionstid = [];
+				var stopptid = [];
+				var kass = [];
+				var avg_stor = [];
+				var avg_normal = [];
+				var avg_liten = [];
+
+				var date_stor = [];
+
+				var sum_produktion = 0;
+				var sum_produktionstid = 0;
+				var sum_stopptid = 0;
+				var sum_stillestånd = 0;
+				var sum_prod = 0;
+
+				var old_arti = "";
+				var old_datum = "";
+				var old_prod = "";
+
+
+				for ( var i = 1; i < myTable.rows.length; i++ ) {
+				    label.push(myTable.rows[i].cells[0].innerHTML);
+				    produktion.push(myTable.rows[i].cells[2].innerHTML);
+				    produktionstid.push(myTable.rows[i].cells[3].innerHTML * 60);
+				    stopptid.push(myTable.rows[i].cells[4].innerHTML * 60);
+				    kass.push(myTable.rows[i].cells[5].innerHTML);
+
+				     var arti = myTable.rows[i].cells[1].innerHTML;
+					var datum = myTable.rows[i].cells[0].innerHTML;
+					var prod = myTable.rows[i].cells[6].innerHTML;
+
+					const lastDigit1Str = String(arti).slice(-1);
+					const artikelnummer = Number(lastDigit1Str);
+
+					// console.log(old_arti, artikelnummer);
+
+					function data(list, artikel, prod) {
+						console.log(list)
+						if (artikelnummer == artikel) {
+							// if (old_arti != artikelnummer) {
+							// 	list.push({x: old_datum, y: old_prod},);
+							// }
+
+							if (old_arti == artikelnummer && old_datum == datum) {
+								var prod = (Number(prod) + Number(myTable.rows[i-1].cells[6].innerHTML)) / 2;
+								list.pop();
+								list.push({x: datum, y: prod},);
+							} else {
+								console.log(prod);
+								list.push({x: datum, y: prod},);
+							}
+
+						} else {
+						    list.push({x: NaN, y: NaN},);
+						}
+
+
+					}
+
+					data(avg_stor, 1, prod);
+					data(avg_normal, 3, prod);
+					data(avg_liten, 5, prod);
+
+
+					old_arti = artikelnummer;
+					old_prod = prod;
+					old_datum = datum;
+
+					// console.log(avg_stor)
+
+					// if (artikelnummer == 1) {
+					// 	if (old_arti != artikelnummer) {
+					// 		avg_stor.push({x: old_datum, y: old_prod},);
+					// 	}
+					//
+					// 	if (old_arti == artikelnummer && old_datum == datum) {
+					// 		var prod = (Number(prod) + Number(myTable.rows[i-1].cells[6].innerHTML)) / 2;
+					// 		avg_stor.pop();
+					// 		avg_stor.push({x: datum, y: prod},);
+					// 	} else {
+					// 		avg_stor.push({x: datum, y: prod},);
+					// 	}
+				     // } else {
+					//     avg_stor.push({x: NaN, y: NaN},);
+				     // }
+					//
+					// if (artikelnummer == 3) {
+					// 	// if (old_arti != artikelnummer) {
+					// 	// 	avg_normal.push({x: old_datum, y: old_prod},);
+					// 	// }
+					//
+					// 	if (old_arti == artikelnummer && old_datum == datum) {
+					// 		var y = (Number(prod) + Number(myTable.rows[i-1].cells[6].innerHTML)) / 2;
+					// 		avg_normal.pop();
+					// 		avg_normal.push({x: datum, y: y},);
+					// 	} else {
+					// 		avg_normal.push({x: datum, y: prod},);
+					// 	}
+					//
+				     // } else {
+					//     avg_normal.push({x: NaN, y: NaN},);
+				     // }
+					//
+					// if (artikelnummer == 5) {
+					// 	// if (old_arti != artikelnummer) {
+					// 	// 	avg_liten.push({x: old_datum, y: old_prod},);
+					// 	// }
+					//
+					// 	if (old_arti == artikelnummer && old_datum == datum) {
+					// 		var y = (Number(prod) + Number(myTable.rows[i-1].cells[6].innerHTML)) / 2;
+					// 		avg_liten.pop();
+					// 		avg_liten.push({x: datum, y: y},);
+					// 	} else {
+					// 		avg_liten.push({x: datum, y: prod},);
+					// 	}
+					//
+				     // } else {
+					//     avg_liten.push({x: NaN, y: NaN},);
+				     // }
+
+
+
+
+				     // if ((arti == 10231) || (arti == 10271) || (arti == 10251)) {
+					// 	if ((datum == myTable.rows[i-1].cells[6].innerHTML) && ((arti == 10231) || (arti == 10271) || (arti == 10251))) {
+					// 		var y = (prod + myTable.rows[i-1].cells[6].innerHTML) / 2;
+					// 		avg_stor.pop();
+					// 		avg_stor.push({x: datum, y: y},);
+					// 	}
+					//     avg_stor.push({x: datum, y: prod},);
+				     // } else {
+					//     avg_stor.push({x: NaN, y: NaN},);
+				     // }
+					//
+				     // if((arti == 10233) || (arti == 10273) || (arti == 10253)) {
+					//     avg_normal.push({x: datum, y: prod},);
+				     // } else {
+					//     avg_normal.push({x: NaN, y: NaN},);
+				     // }
+					//
+				     // if ((arti == 10235) || (arti == 10275) || (arti == 10255)) {
+					//     avg_liten.push({x: datum, y: prod},);
+				     // } else {
+					//     avg_liten.push({x: NaN, y: NaN},);
+				     // }
+
+
+
+				    sum_produktion += parseFloat(myTable.rows[i].cells[1].innerHTML);
+				    sum_produktionstid += parseFloat(myTable.rows[i].cells[2].innerHTML);
+				    sum_stopptid += parseFloat(myTable.rows[i].cells[3].innerHTML);
+				    // sum_stillestånd += parseInt(myTable.rows[i].cells[4].innerHTML);
+				}
+
+				// console.log(avg_stor[avg_stor.length - 1]);
+				 // date_stor.push({x: myTable.rows[4].cells[6].innerHTML, y: myTable.rows[4].cells[0].innerHTML})
+				// var list = [];
+				//
+				// for (i = 1; i < 10; i++ ) {
+				// 	list.push({x: "2016-12-26", y: i},)
+				// }
+				// list.push({x: "2016-12-26", y: 2})
+				// console.log(list)
+
+				document.getElementById("Prod/h").textContent= "Prod: " + (sum_produktion  / sum_produktionstid).toFixed(2);
+				document.getElementById("Stopptid").textContent= "Stopptid: " + ((sum_stopptid  / sum_produktionstid) * 60).toFixed(2) + " min";
+				// console.log(date_stor);
+
+
+
+				var ctx = document.getElementById("prodChart").getContext("2d");
+
+				// var myChart = new Chart(ctx, {
+				// 	type: 'line',
+				// 	data: {
+				// 	    labels: label.reverse(),
+				// 	    datasets: [{
+				// 			label: "Stor/h",
+				// 			data: avg_stor.reverse(),
+				// 			fill: false,
+				// 			hidden: false,
+				// 			backgroundColor: "red",
+				// 			borderColor: "red",
+				// 			borderCapStyle: 'butt'
+				// 		},
+				// 		{
+				// 			label: "Normal/h",
+				// 			data: avg_normal.reverse(),
+				// 			fill: false,
+				// 			hidden: false,
+				// 			backgroundColor: "blue",
+				// 			borderColor: "blue",
+				// 			borderCapStyle: 'butt'
+				// 		},
+				// 	     {
+				// 			label: "Liten/h",
+				// 			data: avg_liten.reverse(),
+				// 			fill: false,
+				// 			hidden: false,
+				// 			backgroundColor: "green",
+				// 			borderColor: "green",
+				// 			borderCapStyle: 'butt'
+				// 		}]
+				// 	},
+				// 		options: {
+				// 			lineTension: 0.4,
+		  		// 			responsive: true,
+		  		// 			maintainAspectRatio: false,
+				// 			scales: {
+				// 				y: {
+				// 					ticks: {
+				// 						beginAtZero: true,
+				// 						min: 10,
+				// 						max: 1000,
+				// 					}
+				// 				}
+				// 			}
+				// 	   	}
+				//
+				// });
+
+
+				const data = {
+				  datasets: [{
+					 label: 'Stor',
+					 borderColor: 'red',
+					 data: avg_stor,
+				 },  {
+				     label: 'normal',
+				     borderColor: 'blue',
+				     data: avg_normal,
+			     },	{
+				    label: 'liten',
+				    borderColor: 'green',
+				    data: avg_liten,
+			    }],
+				};
+
+				const config = {
+				  	type: 'line',
+				  	data: data,
+				  	options: {
+						lineTension: 0.6,
+						spanGaps: false,
+				     	responsive: true,
+						maintainAspectRatio: false,
+
+				     scales: {
+						x: {
+							parsing: false,
+						     type: 'time',
+						     time: {
+						    		unit: 'day'
+					   		}
+					 	}
+				     }
+				  },
+				};
+
+				const myChart = new Chart(
+				  document.getElementById('prodChart'),
+				  config
+				);
 
 				function onRowClick(tableId, callback) {
 					var table = document.getElementById(tableId),
@@ -713,7 +1045,7 @@
 							label: "Pallet fel",
 							type: "bar",
 							data: pallet,
-							hidden: true,
+							hidden: false,
 							backgroundColor: '#B9CFE6',
 							borderColor: '#B9CFE6',
 						},
@@ -943,6 +1275,11 @@
 				$exclude_varning = check_exclude();
 				$today = date('Y-m-d');
 
+				if(isset($_POST['modell'])) {
+					$last_modell = $_POST['modell'];
+				} else {
+					$last_modell = "Välj modell";
+				}
 				echo "<div class='wrapperRecent'>";
 				echo "<div class='date_header'>
 
@@ -950,10 +1287,33 @@
 					<input type='date' class='date_form' name='larm_dateFrom' value='".$today."'>
 					<p class='fromto'>-</p>
 					<input type='date' class='date_form' name='larm_dateTo' value='".$today."'>
+
+					<select name='modell' class='search_model'>
+					    <option value='".$last_modell."'>".$last_modell."</option>
+					    <option value='Allt'>Allt</option>
+
+					    <option value='Stor'>Stor</option>
+					    <option value='Normal'>Normal</option>
+					    <option value='Liten'>Liten</option>
+
+					    <option value='Stor Gul'>Stor Gul</option>
+					    <option value='Stor Vit'>Stor Vit</option>
+					    <option value='Stor Alu'>Stor Alu</option>
+
+					    <option value='Normal Gul'>Normal Gul</option>
+					    <option value='Normal Vit'>Normal Vit</option>
+					    <option value='Normal Alu'>Normal Alu</option>
+
+					    <option value='Liten Gul'>Liten Gul</option>
+					    <option value='Liten Vit'>Liten Vit</option>
+					    <option value='Liten Alu'>Liten Alu</option>
+					</select>
+
 					<button type='submit' name='search_date' class='button_date'>
 						<i class='gg-search'></i>
-					</button></form>
-					</div>";
+					</button>
+
+    					</div>";
 				echo "<div class='stats'>
 						<p class='inline' id='antal'></p>
 						<p class='inline' id='tid'></p>
@@ -1009,28 +1369,58 @@
 				$from = date('Y-m-d', strtotime($_POST['larm_dateFrom']));
 				$to = date('Y-m-d', strtotime($_POST['larm_dateTo']));
 
+				if(isset($_POST['modell'])) {
+					$last_modell = $_POST['modell'];
+				} else {
+					$last_modell = "Välj modell";
+				}
+
 				echo "<div class='wrapperRecent'>";
 				echo "<div class='date_header'>
 
 					<form class='search_date' method='post'>
-					<input type='date' class='date_form' name='larm_dateFrom' value='".$from."'>
-					<p class='fromto'>-</p>
-					<input type='date' class='date_form' name='larm_dateTo' value='".$to."'>
-					<button type='submit' name='search_date' class='button_date'>
-						<i class='gg-search'></i>
-					</button></form>
+						<input type='date' class='date_form' name='larm_dateFrom' value='".$from."'>
+						<p class='fromto'>-</p>
+						<input type='date' class='date_form' name='larm_dateTo' value='".$to."'>
+
+
+						<select name='modell' class='search_model'>
+						    <option value='".$last_modell."'>".$last_modell."</option>
+						    <option value='Allt'>Allt</option>
+
+						    <option value='Stor'>Stor</option>
+						    <option value='Normal'>Normal</option>
+						    <option value='Liten'>Liten</option>
+
+						    <option value='Stor Gul'>Stor Gul</option>
+						    <option value='Stor Vit'>Stor Vit</option>
+						    <option value='Stor Alu'>Stor Alu</option>
+
+						    <option value='Normal Gul'>Normal Gul</option>
+						    <option value='Normal Vit'>Normal Vit</option>
+						    <option value='Normal Alu'>Normal Alu</option>
+
+						    <option value='Liten Gul'>Liten Gul</option>
+						    <option value='Liten Vit'>Liten Vit</option>
+						    <option value='Liten Alu'>Liten Alu</option>
+						</select>
+						<button type='submit' name='search_date' class='button_date'>
+							<i class='gg-search'></i>
+						</button>
+					</form>
 					</div>";
 
+				$search_phrase = search_modell();
 
 				$sql = "SELECT
 					(SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid,
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid WHERE DATE(message_start) BETWEEN '".$from."' AND '".$to."' $exclude_varning
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120 $search_phrase
 					GROUP BY message_text
 					ORDER BY (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 DESC";
-
+				echo $sql;
 				$result = get_data($sql);
 
 				if ($result->num_rows > 0) {
@@ -1078,7 +1468,7 @@
 					 '" AND "' . $to2 . '"';
 					$second = '"' . $from . '" AND "' . $to . '"';
 
-					echo "<br><div align='center'>" . $from2 . ' days' . " till " .
+					echo "<br><div align='center'>" . $from2 . " till " .
 						$to2 . " jämfört med " . $from . " till ". $to . "</div><br>";
 
 
@@ -1267,7 +1657,7 @@
 					COUNT(message_text) AS Antal,
 					message_text AS Larm
 					FROM alarm_tid WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 1120
 					GROUP BY message_text
 					ORDER BY count(message_text) DESC";
 
@@ -1277,13 +1667,13 @@
 					hour(message_start) as Hour
 					FROM alarm_tid
 					WHERE DATE(message_start) = '".$date."' AND message_text NOT LIKE '%Varning%'
-					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+					AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 1120
 					GROUP BY hour(message_start)";
 
 				$sql_stopptid = "SELECT message_text as Larm, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, date(message_start) As Datum, message_start, message_end, hour(message_end) As Hour
 						FROM `alarm_tid`
 						WHERE date(message_start) = '".$date."' and message_text NOT LIKE '%Varning%'
-						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 1120
 						group by message_end ORDER BY `alarm_tid`.`message_start` ASC";
 
 				$sql_prod = "SELECT * FROM produktion WHERE date(date_start) = '".$date."' ORDER BY `produktion`.`datum` DESC";
@@ -1760,8 +2150,49 @@
 					}
 			}
 
-			function TAKOEE($dashboard) {
+			function produktionstid() {
 				$max_prod = 250;
+
+				if(isset($_POST['modell'])) {
+					$last_modell = $_POST['modell'];
+				} else {
+					$last_modell = "Välj modell";
+				}
+				echo "
+				<div align='center' class='date_header'>
+					<form class='search_date2' method='post'>
+						<select name='modell' class='search_model'>
+						    <option value='".$last_modell."'>".$last_modell."</option>
+
+						    <option value='Stor'>Stor</option>
+						    <option value='Normal'>Normal</option>
+						    <option value='Liten'>Liten</option>
+
+						    <option value='Stor Gul'>Stor Gul</option>
+						    <option value='Stor Vit'>Stor Vit</option>
+						    <option value='Stor Alu'>Stor Alu</option>
+
+						    <option value='Normal Gul'>Normal Gul</option>
+						    <option value='Normal Vit'>Normal Vit</option>
+						    <option value='Normal Alu'>Normal Alu</option>
+
+						    <option value='Liten Gul'>Liten Gul</option>
+						    <option value='Liten Vit'>Liten Vit</option>
+						    <option value='Liten Alu'>Liten Alu</option>
+						</select>
+
+						<button type='submit' name='TAKOEE' class='button_date'>
+							<i class='gg-search'></i>
+						</button>
+					</form>
+				</div>";
+				$search_phrase = search_modell();
+				// echo $search_phrase;
+				echo "<div align='left'>
+				<p id='Produktionstid'>Per timme</p>
+				<p id='Stopptid'>Stopptid: </p>
+				<p id='Prod/h'>Prod/h: </p>
+				</div>";
 
 				$sum_prod = "(select sum((";
 				for ($x=0; $x <= 22; $x++) {
@@ -1769,30 +2200,135 @@
 				}
 				$sum_prod .= "COALESCE(produktion.23, 0))))";
 
-				$sql = "select datum, ".$sum_prod." As produktion, (SELECT SUM(TIMESTAMPDIFF(SECOND, date_start, date_end)) / 3600) as prod_tid, (select sum((kassV + kassH))) As kass, date_start, date_end, idle
-					FROM produktion where date_start IS NOT NULL
+				$sql = "select datum, artikelnummer, ".$sum_prod." As produktion, (SELECT SUM(TIMESTAMPDIFF(SECOND, date_start, date_end)) / 3600) as prod_tid,
+					(select sum((kassV + kassH))) As kass, sum(idle_time) as idle_time, (select sum(stopptid)) as stopptid
+					FROM produktion where date_start IS NOT NULL ".$search_phrase." AND datum > '2022-08-18'
+					GROUP BY datum, artikelnummer
+					ORDER BY produktion.date_start DESC";
+
+				$result = get_data($sql);
+
+				$data = $result->fetch_all(MYSQLI_ASSOC);
+
+				$headers = array('Datum', 'Artikelnummer', 'Produktion', 'Produktionstid', 'Stopptid', 'Kass',
+				'prod/h');
+				echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
+				echo "<table style='width:100%;' id='myTable'>";
+				create_table($headers);
+				echo "<br>";
+
+
+				foreach ($data as $row ) {
+					$produktion = $row['produktion'];
+					$produktionstid = $row['prod_tid'];
+					$kass = $row['kass'];
+
+					if ($produktionstid != 0 && $produktion != 0) {
+
+						$old_datum = $row['datum'];
+						$old_artikelnummer = $row['artikelnummer'];
+
+
+
+						$avg_prod = $produktion / $produktionstid;
+
+						echo "<tr><td>" . $row['datum'] .
+							"</td><td>" . $row['artikelnummer'] .
+							"</td><td>" . $produktion .
+							"</td><td>" . bcdiv(($produktionstid), 1, 2)  .
+							"</td><td>" . bcdiv(($row['stopptid']), 1, 2) .
+							"</td><td>" . $kass .
+							"</td><td>" . bcdiv($avg_prod, 1, 0) .
+							"</td>";
+					}
+				}
+				echo "</tr></table>";
+				echo "<br>";
+				echo '<script type="text/javascript">produktionstid();</script><br><br>';
+
+
+			}
+
+			function TAKOEE() {
+				$max_prod = 250;
+
+				if(isset($_POST['modell'])) {
+					$last_modell = $_POST['modell'];
+				} else {
+					$last_modell = "Välj modell";
+				}
+				echo "
+				<div align='center' class='date_header'>
+					<form class='search_date2' method='post'>
+						<select name='modell' class='search_model'>
+						    <option value='".$last_modell."'>".$last_modell."</option>
+
+						    <option value='Stor'>Stor</option>
+						    <option value='Normal'>Normal</option>
+						    <option value='Liten'>Liten</option>
+
+						    <option value='Stor Gul'>Stor Gul</option>
+						    <option value='Stor Vit'>Stor Vit</option>
+						    <option value='Stor Alu'>Stor Alu</option>
+
+						    <option value='Normal Gul'>Normal Gul</option>
+						    <option value='Normal Vit'>Normal Vit</option>
+						    <option value='Normal Alu'>Normal Alu</option>
+
+						    <option value='Liten Gul'>Liten Gul</option>
+						    <option value='Liten Vit'>Liten Vit</option>
+						    <option value='Liten Alu'>Liten Alu</option>
+						</select>
+
+						<button type='submit' name='TAKOEE' class='button_date'>
+							<i class='gg-search'></i>
+						</button>
+					</form>
+				</div>";
+				$search_phrase = search_modell();
+				// echo $search_phrase;
+				echo "<div align='left'>
+				<p id='Produktionstid'>Per timme</p>
+				<p id='Stopptid'>Stopptid: </p>
+				<p id='Prod/h'>Prod/h: </p>
+				</div>
+
+				";
+
+
+				// $search_phrase = "";
+				$sum_prod = "(select sum((";
+				for ($x=0; $x <= 22; $x++) {
+					$sum_prod .= "COALESCE(produktion." . $x . ", 0) + ";
+				}
+				$sum_prod .= "COALESCE(produktion.23, 0))))";
+
+				$sql = "select datum, ".$sum_prod." As produktion, (SELECT SUM(TIMESTAMPDIFF(SECOND, date_start, date_end)) / 3600) as prod_tid,
+					(select sum((kassV + kassH))) As kass, sum(idle_time) as idle_time, (select sum(stopptid)) as stopptid, date_start, date_end, idle
+					FROM produktion where date_start IS NOT NULL ".$search_phrase."
 					GROUP BY datum
 					ORDER BY produktion.date_start DESC";
 
 				$sql_stopptid = "SELECT date(message_start) As Datum, message_start, message_end, count(message_end)
 						FROM `alarm_tid`
 						WHERE date(message_start) > '2022-02-05' and message_text NOT LIKE '%Varning%'
-						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 < 120
+						AND date(message_start) = date(message_end) ".$search_phrase."
 						group by message_end ORDER BY `alarm_tid`.`message_start` DESC";
 
-				// $sql3 = "select produktion.datum,
-				// 		SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
-				// 		".$sum_prod." As produktion,
-				// 		(select(produktion.kassV + produktion.kassH)) As kass,
-				// 		produktion.date_start,
-				// 		produktion.date_end,
-				// 		produktion.idle
-				// 		from produktion
-				// 		left join alarm_tid
-				// 		on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
-				// 		AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
-				// 		WHERE alarm_tid.message_start > '2022-02-05'
-				// 		GROUP by date(alarm_tid.message_start) DESC;";
+				$sql3 = "select produktion.datum,
+						SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end)) / 60 as stopptid,
+						".$sum_prod." As produktion,
+						(select(produktion.kassV + produktion.kassH)) As kass,
+						produktion.date_start,
+						produktion.date_end,
+						produktion.idle
+						from produktion
+						left join alarm_tid
+						on produktion.datum = date(alarm_tid.message_start) AND alarm_tid.message_text NOT LIKE '%Varning%'
+						AND (SELECT SUM(TIMESTAMPDIFF(SECOND, alarm_tid.message_start, alarm_tid.message_end))) / 60 < 120
+						WHERE alarm_tid.message_start > '2022-02-05' ".$search_phrase."
+						GROUP by date(alarm_tid.message_start) DESC;";
+
 				// echo $sql3;
 				// $sql2 = "SELECT date(message_id) as datum, (SELECT SUM(TIMESTAMPDIFF(SECOND, message_start, message_end))) / 60 AS Tid, count(message_id) as count
 				// 	FROM `alarm_tid`
@@ -1800,25 +2336,26 @@
 				// 	group by message_id having count(message_id) > 1 ORDER BY `datum` DESC";
 				// echo $sql;
 				// echo $sql_stopptid;
+				// echo $sql3;
 				$result = get_data($sql);
 				$stopptid = get_data($sql_stopptid);
 
 				$data = $result->fetch_all(MYSQLI_ASSOC);
 				$stopptid = $stopptid->fetch_all(MYSQLI_ASSOC);
 
-				if ($dashboard == false) {
-					echo "<div style='text-align: center;'>
-							<div style='display: inline-block; text-align: left;'>
-								<p>Tillgänglighet = (Produktionstid - Stopptid) / Produktionstid</p>
-								<p>Anläggningsutbyte = (Produktion / Produktionstid) / max produktion</p>
-								<p>Kvalite = (Produktion - Kass) / Produktion</p>
-								<p>OEE = Tillgänglighet * Anläggningsutbyte * Kvalite</p>
-							</div>
-						</div>";
+				// if ($dashboard == false) {
+					// echo "<div style='text-align: center;'>
+					// 		<div style='display: inline-block; text-align: left;'>
+					// 			<p>Tillgänglighet = (Produktionstid - Stopptid) / Produktionstid</p>
+					// 			<p>Anläggningsutbyte = (Produktion / Produktionstid) / max produktion</p>
+					// 			<p>Kvalite = (Produktion - Kass) / Produktion</p>
+					// 			<p>OEE = Tillgänglighet * Anläggningsutbyte * Kvalite</p>
+					// 		</div>
+					// 	</div>";
 
 					$headers = array('Datum', 'Produktion',
 					// 'Max prod', 'Avg prod',
-					'Produktionstid', 'Stopptid', 'Kass', 'avg_prod/h', 'est. prod', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
+					'Produktionstid', 'Stopptid', 'Stillestånd', 'Kass', 'prod/h', 'est. prod', 'Tillgänglighet', 'Anläggningsutbyte', 'Kvalite', 'OEE');
 					echo "<div class='prodChart'><canvas id='prodChart'></canvas></div>";
 					echo "<table style='width:100%;' id='myTable'>";
 					create_table($headers);
@@ -1839,6 +2376,14 @@
 						$start = strtotime($row['message_start']);
 						$end = strtotime($row['message_end']);
 
+						// echo date('Y-m-d', $row['message_start']);
+
+						// echo date('Y-m-d', strtotime($row['message_start']));
+						// echo date('Y-m-d', strtotime($row['message_end']));
+						if (date('Y-m-d', strtotime($row['message_start'])) != date('Y-m-d', strtotime($row['message_end']))) {
+							echo "yes";
+						}
+
 						$sum_diff += abs($start - $end) / 3600;
 
 						if(end($stopptid) !== $row) {
@@ -1857,6 +2402,13 @@
 					//     }
 			    		// }
 					// print_r($res);
+					// $row_counter = 0;
+					//
+					// $sum_avg = 0;
+
+					// $p = 0;
+					// $t = 0;
+
 					foreach ($data as $row ) {
 						$produktion = $row['produktion'];
 						//
@@ -1870,7 +2422,6 @@
 						// $produktionstid = ((strtotime($row["date_end"]) - strtotime($row["date_start"])) / 60) - $row["idle"];
 						$produktionstid = $row['prod_tid'] - ($row["idle"] / 60);
 						$kass = $row['kass'];
-						$avg_prod = $produktion / $produktionstid;
 						$expected_prod = ($produktionstid) * $max_prod;
 
 						if (isset($tid[$row['datum']])) {
@@ -1879,7 +2430,11 @@
 							$stopptid = 0;
 						}
 
-
+						if ($row['idle_time'] > 0) {
+							$Stillestånd = bcdiv(($row['idle_time'] / 3600) - $stopptid, 1, 2);
+						} else {
+							$Stillestånd = "-";
+						}
 						// echo bcdiv($expected_prod, 1, 0) . "<br>";
 						// echo bcdiv($avg_prod, 1, 0) . "<br>";
 						// <td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td>
@@ -1889,20 +2444,81 @@
 							$anläggningsutbyte = ($produktion / $produktionstid) / $max_prod;
 							$kvalite = ($produktion - $kass) / $produktion;
 							$OEE = $tillgänglighet * $anläggningsutbyte * $kvalite;
+							$avg_prod = $produktion / $produktionstid;
+							// echo $produktionstid . "<br>";
+							// $p = $p + $produktion;
+							// $t = $t + $produktionstid;
+
+							// $row_counter = $row_counter + 1;
+							// $sum_avg = $sum_avg + $avg_prod;
+
 
 							echo "<tr><td>" . $row['datum'] . "</td><td>" . $produktion . "</td>
 
-							<td>" . bcdiv(($produktionstid), 1, 2)  . "</td><td>" . bcdiv(($stopptid), 1, 2) . "</td><td>" .
-								$kass . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td><td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
+
+
+							<td>" . bcdiv(($produktionstid), 1, 2)  . "</td><td>" . bcdiv(($stopptid), 1, 2) . "</td><td>" . $Stillestånd . "</td><td>" .
+							$kass . "</td><td>" . bcdiv($avg_prod, 1, 0) . "</td><td>" . bcdiv($expected_prod, 1, 0) . "</td><td>" . bcdiv(($tillgänglighet) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($anläggningsutbyte) * 100, 1, 2) . "%" .
 								 "</td><td>" . bcdiv(($kvalite) * 100, 1, 2) . "%" . "</td><td>" . bcdiv(($OEE) * 100, 1, 2) . "%" . "</td>";
 						}
 					}
 					echo "</tr></table>";
+					// echo $sum_avg/$row_counter;
+					// echo $p;
+					echo "<br>";
+					// echo $t;
 					echo '<script type="text/javascript">chartTAKOEE();</script><br><br>';
+				// } else {
+				// 	return $data;
+				// 	echo "true";
+				// }
+
+			}
+
+			function search_modell() {
+
+				if(isset($_POST['modell'])) {
+					$modell = $_POST['modell'];
+					if($modell == "Stor Gul") {
+						$modell = 10231;
+					} elseif($modell == "Stor Vit") {
+						$modell = 10271;
+					} elseif($modell == "Stor Alu") {
+						$modell = 10251;
+					} elseif($modell == "Normal Gul") {
+						$modell = 10233;
+					} elseif($modell == "Mormal Vit") {
+						$modell = 10273;
+					} elseif($modell == "Normal Alu") {
+						$modell = 10253;
+					} elseif($modell == "Liten Gul") {
+						$modell = 10235;
+					} elseif($modell == "Liten Vit") {
+						$modell = 10275;
+					} elseif($modell == "Liten Alu") {
+						$modell = 10255;
+					}
+
+					$search_phrase = " AND artikelnummer = " . $modell;
+
+					if($modell == "Stor") {
+						$search_phrase = "AND artikelnummer in (10231, 10271, 10251)";
+					} elseif($modell == "Normal") {
+						$search_phrase = "AND artikelnummer in (10233, 10273, 10253)";
+					} elseif($modell == "Liten") {
+						$search_phrase = "AND artikelnummer in (10235, 10275, 10255)";
+					}
+					if($modell == "Välj modell" or $modell == "Allt") {
+						$search_phrase = "";
+					}
+					// echo "<p align='center'>".$last_modell."</p>";
+
 				} else {
-					return $data;
-					echo "true";
+					$search_phrase = "";
 				}
+
+				return $search_phrase;
+
 
 			}
 
@@ -1914,9 +2530,17 @@
 				search_date();
 
 			} else if (isset($_POST['TAKOEE'])) {
-				$dashboard = false;
+				// $dashboard = false;
+				$modell = "";
 				echo "<div class='wrapper'>";
-				TAKOEE($dashboard);
+				TAKOEE($modell);
+				echo "</div>";
+
+			} else if (isset($_POST['TAKOEE_modell'])) {
+				// $dashboard = false;
+				$modell = $_POST['modell'];
+				echo "<div class='wrapper'>";
+				TAKOEE($modell);
 				echo "</div>";
 
 			} else if (isset($_POST['avg_time'])) {
@@ -2013,6 +2637,10 @@
 
 			} else if (isset($_POST['produktion'])) {
 				produktion();
+			} else if (isset($_POST['produktionstid'])) {
+				echo "<div class='wrapper'>";
+				produktionstid();
+				echo "</div>";
 
 			} else {
 				// dashboard();

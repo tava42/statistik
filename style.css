@@ -148,6 +148,28 @@ body {
 	transition: color .25s;
 }
 
+.button_modell {
+	border: none;
+	outline: none;
+	border-radius: 5px;
+	background-color: #f0f0f0;
+	color: #8e8e8e;
+
+
+	place-items: center;
+	width: 50px;
+	padding-right: 15px;
+	padding-left: 10px;
+
+	font-size: 19px;
+	cursor: pointer;
+	transition: color .25s;
+}
+
+.button_modell:hover {
+	color: #0170F0;
+}
+
 .button:hover {
 	color: #0170F0;
 }
@@ -161,17 +183,56 @@ body {
 	border-radius: 5px;
 	/* overflow: hidden; */
 	position: relative;
+	place-items: center;
+	/* padding-left: 15px; */
 	top: 0; bottom: 0; right: 0 left: 0;
      margin: auto;
 	/* margin: 0; */
 	/* justify-content: center; */
-	width: 300px;
+	width: 420px;
+	height: 30px;
+	background: #f0f0f0;
+	float: center;
+	display: flex;
+	/* a
+	nimation: anime 2s cubic-bezier(0.1, 1, 0.1, 1) 0s; */
+}
+.search_date2 {
+	border-radius: 5px;
+	/* overflow: hidden; */
+	position: relative;
+	place-items: center;
+	/* padding-left: 15px; */
+	top: 0; bottom: 0; right: 0 left: 0;
+     margin: auto;
+	/* margin: 0; */
+	/* justify-content: center; */
+	width: 150px;
 	height: 30px;
 	background: #f0f0f0;
 	float: center;
 	display: flex;
 	/* animation: anime 2s cubic-bezier(0.1, 1, 0.1, 1) 0s; */
 }
+
+.search_model {
+	border-radius: 5px;
+	border: none;
+	outline:0px;
+
+	/* position:relative; */
+	/* margin: 0; */
+	/* top: 1%; */
+	width: 175px;
+	height: 30px;
+	/* top: 39%; */
+	/* left: 50%; */
+	/* float: left; */
+	background: #f0f0f0;
+	/* display: flex; */
+
+}
+
 .fromto {
 	display: inline-block;
 	margin-top: auto;
@@ -221,10 +282,27 @@ input[type="date"] {
 }
 
 .button_date {
-	display: grid;
+	/* display: inline-block; */
+	border: none;
+	border-radius: 5px;
+	outline: none;
+	background-color: #f0f0f0;;
+	position: relative;
+	color: #8e8e8e;
+	/* right: 9px; */
+	padding-right: 100px;
+	padding-left: 100px;
+
+	/* top: 2px; */
 	place-items: center;
-	width: 50px;
+	/* margin-top: inherit; */
+	/* top: 24px; */
+
+	width: 30px;
+	height: 30px;
 	padding-right: 15px;
+	padding-left: 10px;
+
 	font-size: 19px;
 	cursor: pointer;
 	transition: color .25s;
@@ -543,5 +621,4 @@ tr:hover {
     opacity:1;
     transform:translateY(0);
   }
-}
 }
